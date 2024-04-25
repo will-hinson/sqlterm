@@ -8,6 +8,7 @@ _command_disconnect_arg_parser: ArgumentParser = ArgumentParser(
     add_help=False,
     exit_on_error=False,
     prog=f"{constants.PREFIX_SQLTERM_COMMAND}disconnect",
+    description="Terminates any currently active SQL connection",
 )
 
 

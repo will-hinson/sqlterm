@@ -1,3 +1,5 @@
+from typing import Any
+
 from terminaltables import SingleTable
 
 from ...abstract import TableBackend
@@ -11,10 +13,19 @@ class TerminalTablesBackend(TableBackend):
             + list(
                 (
                     index,
-                    *(str(field) if field is not None else "NULL" for field in record),
+                    *(self._field_to_str(field) for field in record),
                 )
                 for index, record in enumerate(record_set.records, start=1)
             )
         )
         table.inner_column_border = True
         return table.table
+
+    def _field_to_str(self: "TerminalTablesBackend", field: Any) -> str:
+        if field is not None:
+            if isinstance(field, memoryview):
+                return str(field.tobytes())
+
+            return str(field)
+
+        return "NULL"
