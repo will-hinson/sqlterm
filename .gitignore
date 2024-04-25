@@ -1,0 +1,7 @@
+*.egg-info
+install-venv
+_old
+__pycache__
+test_data
+venv
+.vscode
