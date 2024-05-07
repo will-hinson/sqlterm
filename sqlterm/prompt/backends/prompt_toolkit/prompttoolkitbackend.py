@@ -56,7 +56,7 @@ class _InputModelCompleter(Completer):
             Completion(
                 suggestion.content,
                 start_position=suggestion.position,
-                display_meta=suggestion.grouping,
+                display_meta=suggestion.suffix,
             )
             for suggestion in input_model_suggestions
         ]

@@ -17,7 +17,7 @@ class MsSqlPromptModel(ConnectionPromptModel):
     @staticmethod
     def driver_completer(user_input: str, _: str, __: int) -> List[Suggestion]:
         return [
-            Suggestion(driver_name, "driver", -len(user_input))
+            Suggestion(driver_name, -len(user_input), "driver")
             for driver_name in pyodbc.drivers()
             if driver_name.startswith(user_input) or user_input in driver_name
         ]
