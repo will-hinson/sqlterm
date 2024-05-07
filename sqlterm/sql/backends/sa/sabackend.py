@@ -309,7 +309,7 @@ class SaBackend(SqlBackend):
                 "row loading performance may be noticeably degraded"
             )
 
-        if self.dialect is not None and isinstance(self.__inspector, DefaultInspector):
+        if self.dialect is not None and type(self.__inspector) == DefaultInspector:
             warnings.warn(
                 f"SQL dialect {self.dialect} has no defined SqlInspector. "
                 "Autocomplete suggestions will be limited to ANSI SQL keywords/functions "
