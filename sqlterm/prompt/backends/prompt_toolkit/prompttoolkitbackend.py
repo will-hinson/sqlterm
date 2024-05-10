@@ -209,6 +209,9 @@ class PromptToolkitBackend(PromptBackend):
                     + buffer.document.text[selection_end:]
                 )
 
+                buffer.cursor_position = selection_start
+                buffer.selection_state = None
+
                 return
 
             # check if the preceding set of four characters is all spaces. if so,
