@@ -267,16 +267,16 @@ class PromptToolkitBackend(PromptBackend):
                 event.current_buffer.validate_and_handle()
                 return
 
-            # check if this is a blank line and the previous line ends with ';'
+            # check if this is a blank last line and the previous line ends with ';'
             if (
-                (len(event.current_buffer.document.current_line) == 0)
+                len(event.current_buffer.document.current_line) == 0
+                and event.current_buffer.document.on_last_line
                 and current_text_stripped.endswith(";")
-                or (
-                    event.current_buffer.document.line_count == 1
-                    and current_text_stripped.endswith(";")
-                    and event.current_buffer.cursor_position
-                    == len(event.current_buffer.document.text)
-                )
+            ) or (
+                event.current_buffer.document.line_count == 1
+                and current_text_stripped.endswith(";")
+                and event.current_buffer.cursor_position
+                == len(event.current_buffer.document.text)
             ):
                 event.current_buffer.validate_and_handle()
             else:
