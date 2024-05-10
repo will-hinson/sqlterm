@@ -152,6 +152,49 @@ class PromptToolkitBackend(PromptBackend):
                     )
                 )
 
+        def selected_lines(event: KeyPressEvent) -> List[int]:
+            start_pos, end_pos = event.current_buffer.document.selection_range()
+
+            begin_line: int = -1
+            end_line: int = -1
+            char_index: int = 0
+
+            for index, line in enumerate(event.current_buffer.document.lines):
+                if start_pos in range(char_index, char_index + len(line) + 1):
+                    begin_line = index
+                if end_pos in range(char_index, char_index + len(line) + 1):
+                    end_line = index
+
+                char_index += len(line) + 1
+
+                if begin_line > -1 and end_line > -1:
+                    break
+
+            return list(range(begin_line, end_line + 1))
+
+        # NOTE: we have to have our own bindings here as the Alt-Up/Down combination can perform
+        # a selection that won't cancel for whatever reason. this ensures that the arrow keys will
+        # always cancel an active selection without a shift modifier
+        @bindings.add(Keys.Down)
+        def binding_arrow_down(event: KeyPressEvent) -> None:
+            event.current_buffer.exit_selection()
+            event.current_buffer.cursor_down()
+
+        @bindings.add(Keys.Left)
+        def binding_arrow_left(event: KeyPressEvent) -> None:
+            event.current_buffer.exit_selection()
+            event.current_buffer.cursor_left()
+
+        @bindings.add(Keys.Right)
+        def binding_arrow_right(event: KeyPressEvent) -> None:
+            event.current_buffer.exit_selection()
+            event.current_buffer.cursor_right()
+
+        @bindings.add(Keys.Up)
+        def binding_arrow_up(event: KeyPressEvent) -> None:
+            event.current_buffer.exit_selection()
+            event.current_buffer.cursor_up()
+
         @bindings.add("backspace")
         def binding_backspace(event: KeyPressEvent) -> None:
             # check if there is text currently selected that the user is trying to
@@ -202,6 +245,10 @@ class PromptToolkitBackend(PromptBackend):
                 # otherwise, just remove an individual character like a regular backspace
                 event.current_buffer.delete_before_cursor()
 
+        # NOTE: disable the default i-search
+        @bindings.add("c-s")
+        def binding_ctrl_s(_: KeyPressEvent) -> None: ...
+
         @bindings.add("enter")
         def binding_enter(event: KeyPressEvent) -> None:
             # check for a blank line or a shell or sqlterm command
@@ -236,6 +283,111 @@ class PromptToolkitBackend(PromptBackend):
 
             if current_buffer.complete_state is not None:
                 current_buffer.complete_state.completions = []
+
+        @bindings.add(Keys.Escape, Keys.Down)
+        def binding_alt_down_arrow(event: KeyPressEvent) -> None:
+            # get a list of the currently selected lines
+            orig_cursor_position: int | None = (
+                event.current_buffer.document.selection.original_cursor_position
+                if event.current_buffer.document.selection is not None
+                else None
+            )
+            selection_start, selection_end = (
+                event.current_buffer.document.selection_range()
+            )
+            line_indexes: List[int] = selected_lines(event)
+
+            # check if the first selected line is the last overall line and do nothing if so
+            if line_indexes[-1] == len(event.app.current_buffer.document.lines) - 1:
+                return
+
+            # swap the current lines with the next one
+            next_line: str = event.app.current_buffer.document.lines[
+                line_indexes[-1] + 1
+            ]
+            current_lines: List[str] = [
+                event.app.current_buffer.document.lines[line_index]
+                for line_index in line_indexes
+            ]
+            cursor_col: int = event.app.current_buffer.document.cursor_position_col
+
+            event.app.current_buffer.text = "\n".join(
+                event.app.current_buffer.document.lines[: line_indexes[0]]
+                + [next_line, *current_lines]
+                + event.app.current_buffer.document.lines[line_indexes[-1] + 2 :]
+            )
+
+            if orig_cursor_position is None:
+                event.app.current_buffer.cursor_down()
+                event.app.current_buffer.cursor_right(
+                    count=cursor_col
+                    - event.app.current_buffer.document.cursor_position_col
+                )
+            else:
+                event.app.current_buffer.cursor_position = (
+                    orig_cursor_position + len(next_line) + 1
+                )
+                event.app.current_buffer.start_selection()
+                event.app.current_buffer.cursor_position = (
+                    selection_start + len(next_line) + 1
+                    if selection_start < orig_cursor_position
+                    else selection_end + len(next_line) + 1
+                )
+
+        @bindings.add(Keys.Escape, Keys.Up)
+        def binding_alt_up_arrow(event: KeyPressEvent) -> None:
+            # check if we're already on the first line and do nothing if so
+            if event.app.current_buffer.document.on_first_line:
+                return
+
+            # get a list of the currently selected lines
+            orig_cursor_position: int | None = (
+                event.current_buffer.document.selection.original_cursor_position
+                if event.current_buffer.document.selection is not None
+                else None
+            )
+            selection_start, selection_end = (
+                event.current_buffer.document.selection_range()
+            )
+            line_indexes: List[int] = selected_lines(event)
+
+            # check if the first selected line is the first overall line and do nothing if so
+            if line_indexes[0] == 0:
+                return
+
+            # swap the current line with the previous one
+            prev_line: str = event.app.current_buffer.document.lines[
+                line_indexes[0] - 1
+            ]
+            # current_line: str = event.app.current_buffer.document.current_line
+            current_lines: List[str] = [
+                event.app.current_buffer.document.lines[line_index]
+                for line_index in line_indexes
+            ]
+            cursor_col: int = event.app.current_buffer.document.cursor_position_col
+
+            event.app.current_buffer.text = "\n".join(
+                event.app.current_buffer.document.lines[: line_indexes[0] - 1]
+                + [*current_lines, prev_line]
+                + event.app.current_buffer.document.lines[line_indexes[-1] + 1 :]
+            )
+
+            if orig_cursor_position is None:
+                event.app.current_buffer.cursor_up()
+                event.app.current_buffer.cursor_right(
+                    count=cursor_col
+                    - event.app.current_buffer.document.cursor_position_col
+                )
+            else:
+                event.app.current_buffer.cursor_position = (
+                    orig_cursor_position - len(prev_line) - 1
+                )
+                event.app.current_buffer.start_selection()
+                event.app.current_buffer.cursor_position = (
+                    selection_start - len(prev_line) - 1
+                    if selection_start < orig_cursor_position
+                    else selection_end - len(prev_line) - 1
+                )
 
         @bindings.add("tab")
         def binding_tab(event: KeyPressEvent) -> None:
