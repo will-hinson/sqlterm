@@ -178,7 +178,7 @@ class PromptToolkitBackend(PromptBackend):
         @bindings.add(Keys.Down)
         def binding_arrow_down(event: KeyPressEvent) -> None:
             event.current_buffer.exit_selection()
-            event.current_buffer.cursor_down()
+            event.current_buffer.auto_down()
 
         @bindings.add(Keys.Left)
         def binding_arrow_left(event: KeyPressEvent) -> None:
@@ -193,7 +193,7 @@ class PromptToolkitBackend(PromptBackend):
         @bindings.add(Keys.Up)
         def binding_arrow_up(event: KeyPressEvent) -> None:
             event.current_buffer.exit_selection()
-            event.current_buffer.cursor_up()
+            event.current_buffer.auto_up()
 
         @bindings.add("backspace")
         def binding_backspace(event: KeyPressEvent) -> None:
@@ -251,23 +251,26 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add("enter")
         def binding_enter(event: KeyPressEvent) -> None:
-            # check for a blank line or a shell or sqlterm command
-            if len(event.current_buffer.text.strip()) == 0 or event.current_buffer.text[
-                :1
-            ] in (
+            # check for a blank line or a shell or sqlterm command (also, show help if the user enters 'help')
+            current_text_stripped: str = event.current_buffer.text.strip()
+            if len(current_text_stripped) == 0 or current_text_stripped[:1] in (
                 constants.PREFIX_SHELL_COMMAND,
                 constants.PREFIX_SQLTERM_COMMAND,
             ):
+                event.current_buffer.validate_and_handle()
+                return
+            elif current_text_stripped.lower() == "help":
+                event.current_buffer.text = "%help"
                 event.current_buffer.validate_and_handle()
                 return
 
             # check if this is a blank line and the previous line ends with ';'
             if (
                 (len(event.current_buffer.document.current_line) == 0)
-                and event.current_buffer.document.text.strip().endswith(";")
+                and current_text_stripped.endswith(";")
                 or (
                     event.current_buffer.document.line_count == 1
-                    and event.current_buffer.document.text.strip().endswith(";")
+                    and current_text_stripped.endswith(";")
                     and event.current_buffer.cursor_position
                     == len(event.current_buffer.document.text)
                 )

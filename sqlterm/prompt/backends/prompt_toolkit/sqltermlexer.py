@@ -50,7 +50,11 @@ class SqlTermLexer(Lexer):
     def lex_document(
         self: "SqlTermLexer", document: Document
     ) -> Callable[[int], StyleAndTextTuples]:
-        match document.text[:1]:
+        leading_whitespace: str = document.text[
+            : len(document.text) - len(document.text.lstrip())
+        ]
+
+        match document.text.strip()[:1]:
             # ---- shell command ----
             case constants.PREFIX_SHELL_COMMAND:
                 # function to override the default lexer get_line() function with one that
@@ -61,6 +65,7 @@ class SqlTermLexer(Lexer):
                 ) -> StyleAndTextTuples:
                     if line_number == 0:
                         return [
+                            ("", leading_whitespace),
                             (
                                 "class:shell.command-sigil",
                                 constants.PREFIX_SHELL_COMMAND,
@@ -74,7 +79,9 @@ class SqlTermLexer(Lexer):
                     _get_line_override,
                     get_line_func=self.system_lexer.lex_document(
                         Document(
-                            text=" " + document.text[1:],
+                            text=leading_whitespace
+                            + " "
+                            + document.text[len(leading_whitespace) + 1 :],
                             cursor_position=document.cursor_position,
                             selection=document.selection,
                         )
@@ -84,11 +91,13 @@ class SqlTermLexer(Lexer):
             # ---- sqlterm command ----
             case constants.PREFIX_SQLTERM_COMMAND:
                 return lambda line_number: [
+                    ("", leading_whitespace),
                     ("class:shell.command-sigil", constants.PREFIX_SQLTERM_COMMAND),
                     (
                         "class:shell.command",
                         document.lines[line_number][
-                            len(constants.PREFIX_SQLTERM_COMMAND) :
+                            len(leading_whitespace)
+                            + len(constants.PREFIX_SQLTERM_COMMAND) :
                         ],
                     ),
                 ]

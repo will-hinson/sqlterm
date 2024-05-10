@@ -70,6 +70,8 @@ class SqlTerm:
         self.context.config.to_file(self.context.config_path)
 
     def handle_command(self: "SqlTerm", command: str) -> None:
+        command = command.strip()
+
         match command[:1]:
             case constants.PREFIX_SHELL_COMMAND:
                 self._handle_command_shell(command[1:])
