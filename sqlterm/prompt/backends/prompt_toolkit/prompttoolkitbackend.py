@@ -537,7 +537,9 @@ class PromptToolkitBackend(PromptBackend):
                 ("class:bottom-toolbar.info", " Disconnected"),
             ]
 
-    def get_command(self: "PromptToolkitBackend") -> str:
+    def get_command(
+        self: "PromptToolkitBackend", initial_input: str | None = None
+    ) -> str:
         self.__current_statement_index += 1
 
         try:
@@ -547,7 +549,8 @@ class PromptToolkitBackend(PromptBackend):
                     ("class:prompt-cell.number", str(self.__current_statement_index)),
                     ("class:prompt-cell.bracket", "]"),
                     ("", " " * (2 if self.__current_statement_index < 10 else 1)),
-                ]
+                ],
+                default=initial_input if initial_input is not None else "",
             )
         except EOFError as eof:
             raise UserExit("EOFError while prompting for input") from eof

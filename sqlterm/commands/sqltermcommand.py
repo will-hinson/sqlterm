@@ -81,6 +81,7 @@ from .. import sqlterm
 from .commandalias import CommandAlias
 from .commandconnect import CommandConnect
 from .commanddisconnect import CommandDisconnect
+from .commandedit import CommandEdit
 from .commandexit import CommandExit
 from .commandhelp import CommandHelp
 from .commandinstall import CommandInstall
@@ -90,6 +91,7 @@ _available_commands: Dict[str, Type[SqlTermCommand]] = {
     "alias": CommandAlias,
     "connect": CommandConnect,
     "disconnect": CommandDisconnect,
+    "edit": CommandEdit,
     "exit": CommandExit,
     "help": CommandHelp,
     "install": CommandInstall,
