@@ -69,4 +69,7 @@ class CommandEdit(sqltermcommand.SqlTermCommand):
                 f"Unable to retrieve source for object '{self.args.object_name}'"
             )
 
-        self.parent.context.backends.prompt.get_command(job_source_results[0][0])
+        # reshow the prompt containing the source of the object
+        self.parent.handle_command(
+            self.parent.context.backends.prompt.get_command(job_source_results[0][0])
+        )
