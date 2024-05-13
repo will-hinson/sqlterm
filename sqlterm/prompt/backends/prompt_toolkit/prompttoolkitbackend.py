@@ -29,12 +29,13 @@ from prompt_toolkit.styles import (
     style_from_pygments_cls,
 )
 from prompt_toolkit.validation import Validator, ValidationError
-from pygments.styles import get_style_by_name
+from pygments.styles import get_style_by_name, get_all_styles
 import sqlparse
 
 from .... import constants
 from ...abstract.promptbackend import PromptBackend
 from .completers import DefaultCompleter
+from ....config import SqlTermConfig
 from .controls import ObjectBrowser, SqlObjectView
 from ...dataclasses import InputModel, SqlReference, SqlStatusDetails, Suggestion
 from ...enums import PromptType
@@ -95,8 +96,13 @@ class PromptToolkitBackend(PromptBackend):
     __session: PromptSession
     __current_statement_index: int
 
-    def __init__(self: "PromptToolkitBackend", *args: Tuple, **kwargs: Dict) -> None:
-        super().__init__()
+    def __init__(
+        self: "PromptToolkitBackend",
+        config: SqlTermConfig,
+        *args: Tuple,
+        **kwargs: Dict,
+    ) -> None:
+        super().__init__(config=config)
 
         self.__completer = DefaultCompleter()
         self.__lexer = self._default_lexer
@@ -112,7 +118,13 @@ class PromptToolkitBackend(PromptBackend):
             style=merge_styles(
                 [
                     self._default_style,
-                    style_from_pygments_cls(get_style_by_name("dracula")),
+                    style_from_pygments_cls(
+                        get_style_by_name(
+                            config.color_scheme
+                            if config.color_scheme in get_all_styles()
+                            else "dracula"
+                        )
+                    ),
                 ]
             ),
             completer=self.__completer,

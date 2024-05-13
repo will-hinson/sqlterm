@@ -7,9 +7,9 @@ from .tables.backends.terminaltables import TerminalTablesBackend
 
 def main() -> int:
     session: SqlTerm = SqlTerm(
-        sql_backend=SaBackend(),
-        prompt_backend=PromptToolkitBackend(),
-        table_backend=TerminalTablesBackend(),
+        sql_backend=SaBackend,
+        prompt_backend=PromptToolkitBackend,
+        table_backend=TerminalTablesBackend,
         config_path=SqlTermConfig.default_path(),
     )
     session.repl()

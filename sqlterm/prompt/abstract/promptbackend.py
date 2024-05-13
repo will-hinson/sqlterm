@@ -5,13 +5,14 @@ from typing import Any, Iterable, List
 from ..dataclasses import InputModel, SqlReference
 from ...sql.generic.dataclasses import SqlStructure
 from ...sql.generic.enums import SqlDialect
+from ...config import SqlTermConfig
 
 
 class PromptBackend(metaclass=ABCMeta):
     _dialect: SqlDialect
     parent: "sqlterm.SqlTerm"
 
-    def __init__(self: "PromptBackend") -> None:
+    def __init__(self: "PromptBackend", config: SqlTermConfig) -> None:
         self._dialect = SqlDialect.GENERIC
 
     @abstractmethod

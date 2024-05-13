@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import NoReturn
+from typing import NoReturn, Type
 
 from . import constants
 from .commands import SqlTermCommand
@@ -20,9 +20,9 @@ class SqlTerm:
 
     def __init__(
         self: "SqlTerm",
-        sql_backend: SqlBackend,
-        prompt_backend: PromptBackend,
-        table_backend: TableBackend,
+        sql_backend: Type[SqlBackend],
+        prompt_backend: Type[PromptBackend],
+        table_backend: Type[TableBackend],
         config_path: str,
     ) -> None:
         # try reading a config instance from the provided config file. otherwise, construct
@@ -33,9 +33,9 @@ class SqlTerm:
 
         self.__context = SqlTermContext(
             backends=BackendSet(
-                prompt=prompt_backend,
-                sql=sql_backend,
-                table=table_backend,
+                prompt=prompt_backend(config),
+                sql=sql_backend(),
+                table=table_backend(),
             ),
             config_path=config_path,
             config=config,
