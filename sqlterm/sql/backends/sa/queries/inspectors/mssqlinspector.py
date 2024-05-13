@@ -2,8 +2,7 @@ from typing import Dict, Set, Tuple
 
 from pygments.lexers.sql import TransactSqlLexer
 from pygments.token import Token
-from sqlalchemy import Connection, create_engine
-from sqlalchemy.engine import Engine
+from sqlalchemy import Connection
 
 from ...enums.sadialect import generic_dialect_map
 from .....generic.dataclasses import SqlObject, SqlStructure

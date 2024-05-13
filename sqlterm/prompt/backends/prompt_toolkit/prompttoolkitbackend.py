@@ -1,5 +1,5 @@
-import asyncio
 import functools
+import shutil
 import time
 import traceback
 from typing import Any, Callable, Dict, Iterable, List, Tuple
@@ -262,10 +262,9 @@ class PromptToolkitBackend(PromptBackend):
                 # otherwise, just remove an individual character like a regular backspace
                 event.current_buffer.delete_before_cursor()
 
-        # NOTE: disable the default i-search
         @bindings.add("c-b")
-        def binding_ctrl_b(event: KeyPressEvent) -> None:
-            self._display_object_browser_inline()
+        def binding_ctrl_b(_: KeyPressEvent) -> None:
+            self.display_object_browser(show_loading=False)
 
         # NOTE: disable the default i-search
         @bindings.add("c-s")
@@ -552,11 +551,9 @@ class PromptToolkitBackend(PromptBackend):
             FormattedText([("class:message.sql", message)]), style=self._default_style
         )
 
-    def display_object_browser(self: "PromptToolkitBackend") -> None:
-        self._display_object_browser_ensure_connection()
-        self._show_object_browser(self.__completer.inspector_structure)
-
-    def _display_object_browser_ensure_connection(self: "PromptToolkitBackend") -> None:
+    def display_object_browser(
+        self: "PromptToolkitBackend", show_loading: bool
+    ) -> None:
         # ensure that we actually have a sql connection
         if not self.parent.context.backends.sql.connected:
             raise DisconnectedException(
@@ -567,23 +564,26 @@ class PromptToolkitBackend(PromptBackend):
         self.hide_cursor()
         load_char_offset: int = 0
         while self.parent.context.backends.sql.inspecting:
-            self.display_progress(
-                constants.PROGRESS_CHARACTERS[load_char_offset],
-                " Inspecting database objects...",
-            )
+            if show_loading:
+                self.display_progress(
+                    constants.PROGRESS_CHARACTERS[load_char_offset],
+                    " Inspecting database objects...",
+                )
 
-            load_char_offset = (load_char_offset + 1) % len(
-                constants.PROGRESS_CHARACTERS
-            )
+                load_char_offset = (load_char_offset + 1) % len(
+                    constants.PROGRESS_CHARACTERS
+                )
+
             time.sleep(0.1)
+
+        if show_loading:
+            print("\r", end="")
+            print(" " * (shutil.get_terminal_size().columns - 1), end="")
+            print("\r", end="")
 
         self.show_cursor()
 
-    def _display_object_browser_inline(self: "PromptToolkitBackend") -> None:
-        self._display_object_browser_ensure_connection()
-        asyncio.get_event_loop().run_until_complete(
-            self._show_object_browser_async(self.__completer.inspector_structure)
-        )
+        self._show_object_browser(self.__completer.inspector_structure)
 
     def display_progress(self: "PromptToolkitBackend", *progress_messages: str) -> None:
         print_formatted_text(
@@ -853,10 +853,4 @@ class PromptToolkitBackend(PromptBackend):
         self: "PromptToolkitBackend", structure: SqlStructure
     ) -> None:
         object_browser_app: Application = self._build_object_browser(structure)
-        object_browser_app.run()
-
-    async def _show_object_browser_async(
-        self: "PromptToolkitBackend", structure: SqlStructure
-    ) -> None:
-        object_browser_app: Application = self._build_object_browser(structure)
-        await object_browser_app.run_async()
+        object_browser_app.run(in_thread=True)

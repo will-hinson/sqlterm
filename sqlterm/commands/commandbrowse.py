@@ -19,4 +19,4 @@ class CommandBrowse(sqltermcommand.SqlTermCommand):
         return _command_browse_arg_parser
 
     def execute(self: "CommandBrowse") -> None:
-        self.parent.context.backends.prompt.display_object_browser()
+        self.parent.context.backends.prompt.display_object_browser(show_loading=True)
