@@ -1,8 +1,15 @@
 import functools
+import time
 import traceback
 from typing import Any, Callable, Dict, Iterable, List, Tuple
 
-from prompt_toolkit import print_formatted_text, prompt, PromptSession, shortcuts
+from prompt_toolkit import (
+    Application,
+    print_formatted_text,
+    prompt,
+    PromptSession,
+    shortcuts,
+)
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.document import Document
@@ -10,6 +17,10 @@ from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.key_processor import KeyPressEvent
 from prompt_toolkit.keys import Keys
+from prompt_toolkit.layout import ScrollablePane
+from prompt_toolkit.layout.containers import HSplit, VSplit, Window, WindowAlign
+from prompt_toolkit.layout.controls import FormattedTextControl
+from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.processors import Processor, TabsProcessor
 from prompt_toolkit.styles import (
     BaseStyle,
@@ -24,11 +35,13 @@ import sqlparse
 from .... import constants
 from ...abstract.promptbackend import PromptBackend
 from .completers import DefaultCompleter
+from .controls import SqlObjectView
 from ...dataclasses import InputModel, SqlStatusDetails, Suggestion
 from ...enums import PromptType
 from ...exceptions import UserExit
 from ....sql.generic.dataclasses import SqlStructure
 from ....sql.generic.enums.sqldialect import SqlDialect
+from ....sql.exceptions import DisconnectedException
 from .sqltermlexer import SqlTermLexer
 
 
@@ -454,6 +467,17 @@ class PromptToolkitBackend(PromptBackend):
                 "message.sql": "fg:ansibrightcyan",
                 "shell.command-sigil": "fg:darkgray",
                 "shell.command": "fg:cadetblue",
+                "object-browser.icon-expand": "fg:darkgray",
+                "object-browser.icon-column": "fg:whitesmoke",
+                "object-browser.icon-collapse": "fg:darkgray",
+                "object-browser.icon-database": "fg:cadetblue",
+                "object-browser.icon-function-scalar": "fg:springgreen",
+                "object-browser.icon-function-table-valued": "fg:palegreen",
+                "object-browser.icon-procedure": "fg:gold",
+                "object-browser.icon-schema": "fg:navajowhite",
+                "object-browser.icon-table": "fg:skyblue",
+                "object-browser.icon-view": "fg:salmon",
+                "object-browser.object-name": "fg:azure",
             }
         )
 
@@ -500,9 +524,33 @@ class PromptToolkitBackend(PromptBackend):
             FormattedText([("class:message.sql", message)]), style=self._default_style
         )
 
-    def display_progress(
-        self: "PromptToolkitBackend", *progress_messages: List[str]
-    ) -> None:
+    def display_object_browser(self: "PromptToolkitBackend") -> None:
+        # ensure that we actually have a sql connection
+        if not self.parent.context.backends.sql.connected:
+            raise DisconnectedException(
+                "There is no active SQL connection. Cannot display object browser."
+            )
+
+        # wait until the the sql backend is done inspecting
+        self.hide_cursor()
+        load_char_offset: int = 0
+        while self.parent.context.backends.sql.inspecting:
+            self.display_progress(
+                constants.PROGRESS_CHARACTERS[load_char_offset],
+                " Inspecting database objects...",
+            )
+
+            load_char_offset = (load_char_offset + 1) % len(
+                constants.PROGRESS_CHARACTERS
+            )
+            time.sleep(0.1)
+
+        self.show_cursor()
+
+        # display an object browser application
+        self._show_object_browser(self.__completer.inspector_structure)
+
+    def display_progress(self: "PromptToolkitBackend", *progress_messages: str) -> None:
         print_formatted_text(
             FormattedText(
                 [
@@ -662,3 +710,109 @@ class PromptToolkitBackend(PromptBackend):
 
     def show_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()
+
+    def _show_object_browser(
+        self: "PromptToolkitBackend", structure: SqlStructure
+    ) -> None:
+        bindings: KeyBindings = KeyBindings()
+
+        object_browser_layout: Layout = Layout(
+            HSplit(
+                [
+                    ScrollablePane(
+                        objects_hsplit := HSplit(
+                            [
+                                SqlObjectView(root_object, index)
+                                for index, root_object in enumerate(
+                                    filter(
+                                        lambda root_object: not root_object.builtin,
+                                        sorted(
+                                            structure.objects,
+                                            key=lambda sql_object: sql_object.name,
+                                        ),
+                                    )
+                                )
+                            ]
+                        )
+                    ),
+                    VSplit(
+                        [
+                            Window(
+                                content=FormattedTextControl(
+                                    self._get_bottom_toolbar()
+                                ),
+                                height=1,
+                                style="class:bottom-toolbar",
+                                align=WindowAlign.LEFT,
+                            ),
+                            Window(
+                                content=FormattedTextControl(
+                                    [
+                                        ("", "[Arrows] Navigate"),
+                                        ("", " "),
+                                        ("", "[^S] Search"),
+                                        ("", " "),
+                                        ("", "[?] Help"),
+                                        ("", " "),
+                                        ("", "[q] Quit"),
+                                    ]
+                                ),
+                                height=1,
+                                style="class:bottom-toolbar",
+                                align=WindowAlign.RIGHT,
+                            ),
+                        ]
+                    ),
+                ]
+            )
+        )
+
+        # store a reference to the parent hsplit in all sqlobjectviews
+        for child in objects_hsplit.children:
+            child.parent = objects_hsplit
+
+        focus_index: int = 0
+
+        @bindings.add("c-c")
+        @bindings.add("c-d")
+        @bindings.add("q")
+        def binding_quit(event: KeyPressEvent) -> None:
+            event.app.exit()
+
+        @bindings.add(Keys.Left)
+        def binding_collapse_or_find_parent(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = objects_hsplit.children[focus_index].collapse_or_find_parent(
+                event.app.layout
+            )
+
+        @bindings.add(Keys.Right)
+        def binding_expand(_: KeyPressEvent) -> None:
+            nonlocal focus_index
+            objects_hsplit.children[focus_index].expand_if_collapsed()
+
+        @bindings.add("space")
+        def binding_expand_or_collapse(_: KeyPressEvent) -> None:
+            nonlocal focus_index
+            objects_hsplit.children[focus_index].toggle_collapse()
+
+        @bindings.add(Keys.Down)
+        def binding_next_object(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = min(focus_index + 1, len(objects_hsplit.children) - 1)
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
+        @bindings.add(Keys.Up)
+        def binding_previous_object(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = max(0, focus_index - 1)
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
+        object_browser_app: Application = Application(
+            layout=object_browser_layout,
+            key_bindings=bindings,
+            full_screen=True,
+            max_render_postpone_time=1.0,
+            style=self._default_style,
+        )
+        object_browser_app.run()

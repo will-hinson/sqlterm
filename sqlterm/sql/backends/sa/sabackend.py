@@ -211,12 +211,17 @@ class SaBackend(SqlBackend):
             if self.dialect in sql_inspector_for_dialect
             else None
         )
+
         if inspector_type is not None:
             self.__inspector = inspector_type(parent=self)
             self.__inspector.start()
         else:
             self.__inspector = DefaultInspector(parent=self)
             self.__inspector.start()
+
+    @property
+    def inspecting(self: "SaBackend") -> bool:
+        return self.__inspector.is_alive()
 
     def invalidate_completions(self: "SaBackend") -> None:
         # don't invalidate if we don't currently have a connection

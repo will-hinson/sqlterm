@@ -36,6 +36,9 @@ class PromptBackend(metaclass=ABCMeta):
     def display_message_sql(self: "PromptBackend", message: str) -> None: ...
 
     @abstractmethod
+    def display_object_browser(self: "PromptBackend") -> None: ...
+
+    @abstractmethod
     def display_progress(
         self: "PromptBackend", *progress_messages: List[str]
     ) -> None: ...

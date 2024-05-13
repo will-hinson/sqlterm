@@ -254,21 +254,27 @@ class MsSqlInspector(SqlInspector):
     def _get_children_for(
         self: "MsSqlInspector",
         sql_object: SqlObject,
+        database_name: str,
         object_id: int,
         connection: Connection,
     ) -> Set[SqlObject]:
         match sql_object.type:
             case SqlObjectType.PROCEDURE:
                 return self._get_children_for_procedure(
-                    object_id, connection=connection
+                    database_name, object_id, connection=connection
                 )
             case SqlObjectType.TABLE:
-                return self._get_children_for_table(object_id, connection=connection)
+                return self._get_children_for_table(
+                    database_name, object_id, connection=connection
+                )
             case _:
                 return set()
 
     def _get_children_for_procedure(
-        self: "MsSqlInspector", object_id: int, connection: Connection
+        self: "MsSqlInspector",
+        database_name: str,
+        object_id: int,
+        connection: Connection,
     ) -> Set[SqlObject]:
         return {
             SqlObject(name=parameter_name, type=SqlObjectType.PARAMETER, children=set())
@@ -282,9 +288,9 @@ class MsSqlInspector(SqlInspector):
                         FROM
                             sys.parameters
                         WHERE
-                            [object_id] = ?;
+                            [object_id] = id?;
                         """.replace(
-                            "?", str(object_id)
+                            "id?", str(object_id)
                         )
                     ).sa_text
                 ).fetchall(),
@@ -292,7 +298,10 @@ class MsSqlInspector(SqlInspector):
         }
 
     def _get_children_for_table(
-        self: "MsSqlInspector", object_id: int, connection: Connection
+        self: "MsSqlInspector",
+        database_name: str,
+        object_id: int,
+        connection: Connection,
     ) -> Set[SqlObject]:
         return {
             SqlObject(name=column_name, type=SqlObjectType.COLUMN, children=set())
@@ -304,12 +313,14 @@ class MsSqlInspector(SqlInspector):
                         SELECT DISTINCT
                             [name]
                         FROM
-                            sys.columns
+                            "db?".sys.columns
                         WHERE
-                            [object_id] = ?;
+                            [object_id] = id?;
                         """.replace(
-                            "?", str(object_id)
-                        )
+                            "db?", database_name.replace('"', '""')
+                        ).replace(
+                            "id?", str(object_id)
+                        ),
                     ).sa_text
                 ).fetchall(),
             )
@@ -395,7 +406,10 @@ class MsSqlInspector(SqlInspector):
                 children=set(),
             )
             sql_object.children = self._get_children_for(
-                sql_object, object_id=object_id, connection=connection
+                sql_object,
+                database_name=database_name,
+                object_id=object_id,
+                connection=connection,
             )
 
             # add the sql object as a child of this schema

@@ -79,6 +79,7 @@ class SqlTermCommand(metaclass=ABCMeta):
 # pylint: disable=wrong-import-position
 from .. import sqlterm
 from .commandalias import CommandAlias
+from .commandbrowse import CommandBrowse
 from .commandconnect import CommandConnect
 from .commanddisconnect import CommandDisconnect
 from .commandedit import CommandEdit
@@ -90,6 +91,7 @@ from .commandjobs import CommandJobs
 _available_commands: Dict[str, Type[SqlTermCommand]] = {
     "alias": CommandAlias,
     "connect": CommandConnect,
+    "browse": CommandBrowse,
     "disconnect": CommandDisconnect,
     "edit": CommandEdit,
     "exit": CommandExit,
