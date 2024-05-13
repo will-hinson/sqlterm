@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import time
 import traceback
@@ -262,6 +263,11 @@ class PromptToolkitBackend(PromptBackend):
                 event.current_buffer.delete_before_cursor()
 
         # NOTE: disable the default i-search
+        @bindings.add("c-b")
+        def binding_ctrl_b(event: KeyPressEvent) -> None:
+            self._display_object_browser_inline()
+
+        # NOTE: disable the default i-search
         @bindings.add("c-s")
         def binding_ctrl_s(_: KeyPressEvent) -> None: ...
 
@@ -410,6 +416,27 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add("tab")
         def binding_tab(event: KeyPressEvent) -> None:
+            # check if there is a multiline selection and indent all lines if so
+            if (
+                event.app.current_buffer.selection_state is not None
+                and len(target_lines := selected_lines(event)) > 1
+            ):
+                event.current_buffer.text = event.current_buffer.transform_lines(
+                    target_lines,
+                    lambda line: (
+                        " "
+                        * (
+                            (
+                                constants.SPACES_IN_TAB
+                                - (len(line) - len(line.lstrip(" ")))
+                                % constants.SPACES_IN_TAB
+                            )
+                        )
+                    )
+                    + line,
+                )
+                return
+
             # map tab to four spaces
             event.app.current_buffer.insert_text(
                 " "
@@ -526,6 +553,10 @@ class PromptToolkitBackend(PromptBackend):
         )
 
     def display_object_browser(self: "PromptToolkitBackend") -> None:
+        self._display_object_browser_ensure_connection()
+        self._show_object_browser(self.__completer.inspector_structure)
+
+    def _display_object_browser_ensure_connection(self: "PromptToolkitBackend") -> None:
         # ensure that we actually have a sql connection
         if not self.parent.context.backends.sql.connected:
             raise DisconnectedException(
@@ -548,8 +579,11 @@ class PromptToolkitBackend(PromptBackend):
 
         self.show_cursor()
 
-        # display an object browser application
-        self._show_object_browser(self.__completer.inspector_structure)
+    def _display_object_browser_inline(self: "PromptToolkitBackend") -> None:
+        self._display_object_browser_ensure_connection()
+        asyncio.get_event_loop().run_until_complete(
+            self._show_object_browser_async(self.__completer.inspector_structure)
+        )
 
     def display_progress(self: "PromptToolkitBackend", *progress_messages: str) -> None:
         print_formatted_text(
@@ -712,9 +746,9 @@ class PromptToolkitBackend(PromptBackend):
     def show_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()
 
-    def _show_object_browser(
+    def _build_object_browser(
         self: "PromptToolkitBackend", structure: SqlStructure
-    ) -> None:
+    ) -> Application:
         bindings: KeyBindings = KeyBindings()
 
         object_browser_layout: Layout = Layout(
@@ -752,8 +786,6 @@ class PromptToolkitBackend(PromptBackend):
                                         ("", "[Arrows] Navigate"),
                                         ("", " "),
                                         ("", "[^S] Search"),
-                                        ("", " "),
-                                        ("", "[?] Help"),
                                         ("", " "),
                                         ("", "[q] Quit"),
                                     ]
@@ -809,11 +841,22 @@ class PromptToolkitBackend(PromptBackend):
             focus_index = max(0, focus_index - 1)
             event.app.layout.focus(objects_hsplit.children[focus_index])
 
-        object_browser_app: Application = Application(
+        return Application(
             layout=object_browser_layout,
             key_bindings=bindings,
             full_screen=True,
             max_render_postpone_time=1.0,
             style=self._default_style,
         )
+
+    def _show_object_browser(
+        self: "PromptToolkitBackend", structure: SqlStructure
+    ) -> None:
+        object_browser_app: Application = self._build_object_browser(structure)
         object_browser_app.run()
+
+    async def _show_object_browser_async(
+        self: "PromptToolkitBackend", structure: SqlStructure
+    ) -> None:
+        object_browser_app: Application = self._build_object_browser(structure)
+        await object_browser_app.run_async()
