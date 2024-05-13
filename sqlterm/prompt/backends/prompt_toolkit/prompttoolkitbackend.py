@@ -263,17 +263,20 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add("c-b")
         def binding_ctrl_b(event: KeyPressEvent) -> None:
-            object_browser_result: SqlReference | None = self.display_object_browser(
-                show_loading=False
-            )
-
-            if object_browser_result is not None:
-                event.current_buffer.insert_text(
-                    ".".join(
-                        '"' + sql_object.name.replace('"', '""') + '"'
-                        for sql_object in object_browser_result.hierarchy
-                    )
+            try:
+                object_browser_result: SqlReference | None = (
+                    self.display_object_browser(show_loading=False)
                 )
+
+                if object_browser_result is not None:
+                    event.current_buffer.insert_text(
+                        ".".join(
+                            '"' + sql_object.name.replace('"', '""') + '"'
+                            for sql_object in object_browser_result.hierarchy
+                        )
+                    )
+            except DisconnectedException:
+                ...
 
         # NOTE: disable the default i-search
         @bindings.add("c-s")
