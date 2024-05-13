@@ -473,6 +473,7 @@ class PromptToolkitBackend(PromptBackend):
                 "object-browser.icon-database": "fg:cadetblue",
                 "object-browser.icon-function-scalar": "fg:springgreen",
                 "object-browser.icon-function-table-valued": "fg:palegreen",
+                "object-browser.icon-parameter": "fg:cornsilk",
                 "object-browser.icon-procedure": "fg:gold",
                 "object-browser.icon-schema": "fg:navajowhite",
                 "object-browser.icon-table": "fg:skyblue",

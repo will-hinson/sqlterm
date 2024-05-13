@@ -227,6 +227,49 @@ class MsSqlInspector(SqlInspector):
         "VIEW": SqlObjectType.VIEW,
     }
 
+    _database_children_cache: Dict[str, Dict[int, Set[SqlObject]]]
+
+    def _cache_children_for_database(
+        self: "MsSqlInspector", database_name: str, connection: Connection
+    ) -> None:
+        if database_name in self._database_children_cache:
+            return
+
+        children: Dict[int, Set[SqlObject]] = {}
+        for query_str, object_type in {
+            """
+                SELECT DISTINCT
+                    [object_id],
+                    [name]
+                FROM
+                    "?".sys.parameters
+                WHERE
+                    [name] != '';
+                """.replace(
+                "?", database_name.replace('"', '""')
+            ): SqlObjectType.PARAMETER,
+            """
+                SELECT DISTINCT
+                    [object_id],
+                    [name]
+                FROM
+                    "?".sys.columns;
+                """.replace(
+                "?", database_name.replace('"', '""')
+            ): SqlObjectType.COLUMN,
+        }.items():
+            for object_id, name in connection.execute(
+                self.parent.make_query(query_str).sa_text
+            ):
+                if object_id not in children:
+                    children[object_id] = set()
+
+                children[object_id].add(
+                    SqlObject(name=name, type=object_type, children=set())
+                )
+
+        self._database_children_cache[database_name] = children
+
     def _get_builtin_types(
         self: "MsSqlInspector", connection: Connection
     ) -> Set[SqlObject]:
@@ -258,73 +301,13 @@ class MsSqlInspector(SqlInspector):
         object_id: int,
         connection: Connection,
     ) -> Set[SqlObject]:
-        match sql_object.type:
-            case SqlObjectType.PROCEDURE:
-                return self._get_children_for_procedure(
-                    database_name, object_id, connection=connection
-                )
-            case SqlObjectType.TABLE:
-                return self._get_children_for_table(
-                    database_name, object_id, connection=connection
-                )
-            case _:
-                return set()
+        # cache all children for this database
+        self._cache_children_for_database(database_name, connection=connection)
 
-    def _get_children_for_procedure(
-        self: "MsSqlInspector",
-        database_name: str,
-        object_id: int,
-        connection: Connection,
-    ) -> Set[SqlObject]:
-        return {
-            SqlObject(name=parameter_name, type=SqlObjectType.PARAMETER, children=set())
-            for parameter_name in map(
-                lambda row: row[0],
-                connection.execute(
-                    self.parent.make_query(
-                        """
-                        SELECT DISTINCT
-                            [name]
-                        FROM
-                            sys.parameters
-                        WHERE
-                            [object_id] = id?;
-                        """.replace(
-                            "id?", str(object_id)
-                        )
-                    ).sa_text
-                ).fetchall(),
-            )
-        }
-
-    def _get_children_for_table(
-        self: "MsSqlInspector",
-        database_name: str,
-        object_id: int,
-        connection: Connection,
-    ) -> Set[SqlObject]:
-        return {
-            SqlObject(name=column_name, type=SqlObjectType.COLUMN, children=set())
-            for column_name in map(
-                lambda row: row[0],
-                connection.execute(
-                    self.parent.make_query(
-                        """
-                        SELECT DISTINCT
-                            [name]
-                        FROM
-                            "db?".sys.columns
-                        WHERE
-                            [object_id] = id?;
-                        """.replace(
-                            "db?", database_name.replace('"', '""')
-                        ).replace(
-                            "id?", str(object_id)
-                        ),
-                    ).sa_text
-                ).fetchall(),
-            )
-        }
+        database_cache: Dict[int, Set[SqlObject]] = self._database_children_cache[
+            database_name
+        ]
+        return database_cache[object_id] if object_id in database_cache else set()
 
     def _get_database_names(self: "MsSqlInspector", connection: Connection) -> Set[str]:
         return set(
@@ -423,6 +406,7 @@ class MsSqlInspector(SqlInspector):
         }
 
     def refresh_structure(self: "MsSqlInspector") -> None:
+        self._database_children_cache = {}
         connection: Connection = self.parent.make_connection()
 
         structure: SqlStructure = SqlStructure(
