@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, Iterable, List, Tuple
+from typing import Any, Iterable, List
 
 
-from ..dataclasses import InputModel
+from ..dataclasses import InputModel, SqlReference
 from ...sql.generic.dataclasses import SqlStructure
 from ...sql.generic.enums import SqlDialect
 
@@ -36,7 +36,9 @@ class PromptBackend(metaclass=ABCMeta):
     def display_message_sql(self: "PromptBackend", message: str) -> None: ...
 
     @abstractmethod
-    def display_object_browser(self: "PromptBackend", show_loading: bool) -> None: ...
+    def display_object_browser(
+        self: "PromptBackend", show_loading: bool
+    ) -> SqlReference | None: ...
 
     @abstractmethod
     def display_progress(

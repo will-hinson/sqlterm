@@ -45,7 +45,7 @@ class SqlObjectView(Window):
     index: int
     indent_level: int
     parent: HSplit = None
-    __sql_object: SqlObject
+    sql_object: SqlObject
 
     indent_length: int = 2
 
@@ -57,7 +57,7 @@ class SqlObjectView(Window):
         indent_level: int = 0,
     ) -> None:
         self.__expanded = False
-        self.__sql_object = sql_object
+        self.sql_object = sql_object
         self.indent_level = indent_level
         self.__children = []
         self.index = index
@@ -78,9 +78,7 @@ class SqlObjectView(Window):
             child._collapse()
 
         # remove the children from the parent HSplit
-        for index in range(
-            self.index + len(self.__sql_object.children), self.index, -1
-        ):
+        for index in range(self.index + len(self.sql_object.children), self.index, -1):
             del self.parent.children[index]
 
         self.__children = []
@@ -115,7 +113,7 @@ class SqlObjectView(Window):
 
         for offset, child_object in enumerate(
             sorted(
-                self.__sql_object.children,
+                self.sql_object.children,
                 key=lambda sql_object: (sql_object.type, sql_object.name.lower()),
             ),
             start=1,
@@ -133,7 +131,7 @@ class SqlObjectView(Window):
             self.__children.append(new_child)
 
         for update_index in range(
-            self.index + len(self.__sql_object.children), len(self.parent.children)
+            self.index + len(self.sql_object.children), len(self.parent.children)
         ):
             self.parent.children[update_index].index = update_index
 
@@ -165,7 +163,7 @@ class SqlObjectView(Window):
     def _get_text_content(
         self: "SqlObjectView", collapsed: bool
     ) -> FormattedTextControl:
-        if len(self.__sql_object.children) == 0:
+        if len(self.sql_object.children) == 0:
             return FormattedTextControl(
                 FormattedText(
                     [
@@ -178,7 +176,7 @@ class SqlObjectView(Window):
                                 + 1
                             ),
                         ),
-                        *self._get_sql_object_label(self.__sql_object),
+                        *self._get_sql_object_label(self.sql_object),
                     ]
                 )
             )
@@ -193,7 +191,7 @@ class SqlObjectView(Window):
                             constants.TREE_VIEW_EXPANDED_CHAR,
                         ),
                         ("", " "),
-                        *self._get_sql_object_label(self.__sql_object),
+                        *self._get_sql_object_label(self.sql_object),
                     ]
                 )
             )
@@ -207,13 +205,13 @@ class SqlObjectView(Window):
                         constants.TREE_VIEW_COLLAPSED_CHAR,
                     ),
                     ("", " "),
-                    *self._get_sql_object_label(self.__sql_object),
+                    *self._get_sql_object_label(self.sql_object),
                 ]
             )
         )
 
     def toggle_collapse(self: "SqlObjectView") -> None:
-        if len(self.__sql_object.children) == 0:
+        if len(self.sql_object.children) == 0:
             return
 
         if self.__expanded:

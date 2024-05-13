@@ -5,7 +5,6 @@ import traceback
 from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 from prompt_toolkit import (
-    Application,
     print_formatted_text,
     prompt,
     PromptSession,
@@ -36,11 +35,11 @@ import sqlparse
 from .... import constants
 from ...abstract.promptbackend import PromptBackend
 from .completers import DefaultCompleter
-from .controls import SqlObjectView
-from ...dataclasses import InputModel, SqlStatusDetails, Suggestion
+from .controls import ObjectBrowser, SqlObjectView
+from ...dataclasses import InputModel, SqlReference, SqlStatusDetails, Suggestion
 from ...enums import PromptType
 from ...exceptions import UserExit
-from ....sql.generic.dataclasses import SqlStructure
+from ....sql.generic.dataclasses import SqlObject, SqlStructure
 from ....sql.generic.enums.sqldialect import SqlDialect
 from ....sql.exceptions import DisconnectedException
 from .sqltermlexer import SqlTermLexer
@@ -263,8 +262,18 @@ class PromptToolkitBackend(PromptBackend):
                 event.current_buffer.delete_before_cursor()
 
         @bindings.add("c-b")
-        def binding_ctrl_b(_: KeyPressEvent) -> None:
-            self.display_object_browser(show_loading=False)
+        def binding_ctrl_b(event: KeyPressEvent) -> None:
+            object_browser_result: SqlReference | None = self.display_object_browser(
+                show_loading=False
+            )
+
+            if object_browser_result is not None:
+                event.current_buffer.insert_text(
+                    ".".join(
+                        '"' + sql_object.name.replace('"', '""') + '"'
+                        for sql_object in object_browser_result.hierarchy
+                    )
+                )
 
         # NOTE: disable the default i-search
         @bindings.add("c-s")
@@ -553,7 +562,7 @@ class PromptToolkitBackend(PromptBackend):
 
     def display_object_browser(
         self: "PromptToolkitBackend", show_loading: bool
-    ) -> None:
+    ) -> SqlReference | None:
         # ensure that we actually have a sql connection
         if not self.parent.context.backends.sql.connected:
             raise DisconnectedException(
@@ -583,7 +592,7 @@ class PromptToolkitBackend(PromptBackend):
 
         self.show_cursor()
 
-        self._show_object_browser(self.__completer.inspector_structure)
+        return self._show_object_browser(self.__completer.inspector_structure)
 
     def display_progress(self: "PromptToolkitBackend", *progress_messages: str) -> None:
         print_formatted_text(
@@ -748,7 +757,7 @@ class PromptToolkitBackend(PromptBackend):
 
     def _build_object_browser(
         self: "PromptToolkitBackend", structure: SqlStructure
-    ) -> Application:
+    ) -> ObjectBrowser:
         bindings: KeyBindings = KeyBindings()
 
         object_browser_layout: Layout = Layout(
@@ -806,10 +815,29 @@ class PromptToolkitBackend(PromptBackend):
 
         focus_index: int = 0
 
-        @bindings.add("c-c")
-        @bindings.add("c-d")
-        @bindings.add("q")
-        def binding_quit(event: KeyPressEvent) -> None:
+        @bindings.add(Keys.Enter)
+        def binding_accept(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+
+            current_index: int = focus_index
+            current_hierarchy_level: int = objects_hsplit.children[
+                current_index
+            ].indent_level
+            object_hierarchy: List[SqlObject] = [
+                objects_hsplit.children[current_index].sql_object
+            ]
+            while current_hierarchy_level > 0 and current_index > 0:
+                current_object: SqlObjectView = objects_hsplit.children[current_index]
+                if (
+                    new_hierarchy_level := current_object.indent_level
+                ) < current_hierarchy_level:
+                    current_hierarchy_level = new_hierarchy_level
+                    object_hierarchy.append(current_object.sql_object)
+
+                current_index -= 1
+
+            object_hierarchy.reverse()
+            event.app.result = SqlReference(hierarchy=object_hierarchy)
             event.app.exit()
 
         @bindings.add(Keys.Left)
@@ -841,7 +869,13 @@ class PromptToolkitBackend(PromptBackend):
             focus_index = max(0, focus_index - 1)
             event.app.layout.focus(objects_hsplit.children[focus_index])
 
-        return Application(
+        @bindings.add("c-c")
+        @bindings.add("c-d")
+        @bindings.add("q")
+        def binding_quit(event: KeyPressEvent) -> None:
+            event.app.exit()
+
+        return ObjectBrowser(
             layout=object_browser_layout,
             key_bindings=bindings,
             full_screen=True,
@@ -851,6 +885,8 @@ class PromptToolkitBackend(PromptBackend):
 
     def _show_object_browser(
         self: "PromptToolkitBackend", structure: SqlStructure
-    ) -> None:
-        object_browser_app: Application = self._build_object_browser(structure)
-        object_browser_app.run(in_thread=True)
+    ) -> SqlReference | None:
+        object_browser: ObjectBrowser = self._build_object_browser(structure)
+        object_browser.run(in_thread=True)
+
+        return object_browser.result
