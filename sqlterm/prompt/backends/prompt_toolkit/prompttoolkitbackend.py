@@ -97,6 +97,14 @@ class PromptToolkitBackend(PromptBackend):
     __session: PromptSession
     __current_statement_index: int
 
+    __dialect_escape_chars: Dict[SqlDialect, str] = {
+        SqlDialect.GENERIC: '"',
+        SqlDialect.MYSQL: "`",
+        SqlDialect.POSTGRES: '"',
+        SqlDialect.SQLITE: '"',
+        SqlDialect.TSQL: '"',
+    }
+
     def __init__(
         self: "PromptToolkitBackend",
         config: SqlTermConfig,
@@ -271,6 +279,11 @@ class PromptToolkitBackend(PromptBackend):
         @bindings.add("c-b")
         def binding_ctrl_b(event: KeyPressEvent) -> None:
             try:
+                dialect_escape_char: str = (
+                    self.__dialect_escape_chars[self.dialect]
+                    if self.dialect in self.__dialect_escape_chars
+                    else '"'
+                )
                 object_browser_result: SqlReference | None = (
                     self.display_object_browser(show_loading=False)
                 )
@@ -278,7 +291,11 @@ class PromptToolkitBackend(PromptBackend):
                 if object_browser_result is not None:
                     event.current_buffer.insert_text(
                         ".".join(
-                            '"' + sql_object.name.replace('"', '""') + '"'
+                            dialect_escape_char
+                            + sql_object.name.replace(
+                                dialect_escape_char, dialect_escape_char * 2
+                            )
+                            + dialect_escape_char
                             for sql_object in object_browser_result.hierarchy
                         )
                     )
