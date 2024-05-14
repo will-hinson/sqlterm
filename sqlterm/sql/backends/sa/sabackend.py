@@ -18,6 +18,7 @@ from ...exceptions import (
     RecordSetEnd,
     ReturnsNoRecords,
     SqlBackendMismatchException,
+    SqlQueryException,
 )
 from .dataclasses import ConnectionPromptModel
 from .enums import SaDialect
@@ -167,7 +168,10 @@ class SaBackend(SqlBackend):
             self._spool_results(manager)
 
     def fetch_results_for(self: "SaBackend", query: Query) -> List[Tuple]:
-        return list(map(tuple, self.connection.execute(query.sa_text).fetchall()))
+        try:
+            return list(map(tuple, self.connection.execute(query.sa_text).fetchall()))
+        except SQLAlchemyError as sae:
+            raise SqlQueryException("\n".join(sae.args)) from sae
 
     def get_status(self: "SaBackend") -> SqlStatusDetails:
         connection_detail: str = (
