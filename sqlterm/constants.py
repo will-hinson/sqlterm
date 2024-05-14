@@ -35,6 +35,9 @@ except shellingham.ShellDetectionFailure:
 
 SPACES_IN_TAB: int = 4
 
+TREE_VIEW_COLLAPSED_CHAR: str = "▷"
+TREE_VIEW_EXPANDED_CHAR: str = "▽"
+
 ANSI_SQL_FUNCTIONS: Set[str] = {
     "ABS()",
     "AVG()",

@@ -15,17 +15,24 @@ _command_jobs_arg_parser: ArgumentParser = ArgumentParser(
     add_help=False,
     exit_on_error=False,
     prog=f"{constants.PREFIX_SQLTERM_COMMAND}jobs",
+    description="Allows listing, starting, and stopping of SQL jobs on supported dialects",
 )
 
 _sub_parsers = _command_jobs_arg_parser.add_subparsers(dest="subcommand")
 _sub_parsers.required = True
 
-_command_jobs_list_parser = _sub_parsers.add_parser("list")
+_command_jobs_list_parser = _sub_parsers.add_parser(
+    "list", help="Lists all SQL jobs including name and current status"
+)
 
-_command_jobs_start_parser = _sub_parsers.add_parser("start")
-_command_jobs_start_parser.add_argument("job_name", type=str)
+_command_jobs_start_parser = _sub_parsers.add_parser(
+    "start", help="Starts a SQL job with the provided name"
+)
+_command_jobs_start_parser.add_argument("job_name")
 
-_command_jobs_stop_parser = _sub_parsers.add_parser("stop")
+_command_jobs_stop_parser = _sub_parsers.add_parser(
+    "stop", help="Stops a SQL job with the provided name"
+)
 _command_jobs_stop_parser.add_argument("job_name", type=str)
 
 

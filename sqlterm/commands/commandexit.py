@@ -9,6 +9,7 @@ _command_exit_arg_parser: ArgumentParser = ArgumentParser(
     add_help=False,
     exit_on_error=False,
     prog=f"{constants.PREFIX_SQLTERM_COMMAND}exit",
+    description="Exits the current sqlterm session terminating any active SQL connection",
 )
 
 

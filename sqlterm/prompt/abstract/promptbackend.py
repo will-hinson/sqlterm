@@ -1,17 +1,20 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, Iterable, List, Tuple
+from typing import Any, Iterable, List
 
 
-from ..dataclasses import InputModel
+from ..dataclasses import InputModel, SqlReference
 from ...sql.generic.dataclasses import SqlStructure
 from ...sql.generic.enums import SqlDialect
+from ...config import SqlTermConfig
 
 
 class PromptBackend(metaclass=ABCMeta):
+    config: SqlTermConfig
     _dialect: SqlDialect
     parent: "sqlterm.SqlTerm"
 
-    def __init__(self: "PromptBackend") -> None:
+    def __init__(self: "PromptBackend", config: SqlTermConfig) -> None:
+        self.config = config
         self._dialect = SqlDialect.GENERIC
 
     @abstractmethod
@@ -36,12 +39,20 @@ class PromptBackend(metaclass=ABCMeta):
     def display_message_sql(self: "PromptBackend", message: str) -> None: ...
 
     @abstractmethod
+    def display_object_browser(
+        self: "PromptBackend", show_loading: bool
+    ) -> SqlReference | None: ...
+
+    @abstractmethod
     def display_progress(
         self: "PromptBackend", *progress_messages: List[str]
     ) -> None: ...
 
     @abstractmethod
-    def get_command(self: "PromptBackend") -> str: ...
+    def display_table(self: "PromptBackend", table: str) -> None: ...
+
+    @abstractmethod
+    def get_command(self: "PromptBackend", initial_input: str | None = None) -> str: ...
 
     @abstractmethod
     def hide_cursor(self: "PromptBackend") -> None: ...

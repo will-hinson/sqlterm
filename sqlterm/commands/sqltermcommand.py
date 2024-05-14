@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from argparse import ArgumentParser, Namespace
 import shlex
-from typing import Dict, List, Type
+from typing import Dict, List, Set, Type
 
 from Levenshtein import distance
 
@@ -79,20 +79,28 @@ class SqlTermCommand(metaclass=ABCMeta):
 # pylint: disable=wrong-import-position
 from .. import sqlterm
 from .commandalias import CommandAlias
+from .commandbrowse import CommandBrowse
 from .commandconnect import CommandConnect
 from .commanddisconnect import CommandDisconnect
+from .commandedit import CommandEdit
 from .commandexit import CommandExit
+from .commandhelp import CommandHelp
 from .commandinstall import CommandInstall
 from .commandjobs import CommandJobs
 
-_available_commands = {
+_available_commands: Dict[str, Type[SqlTermCommand]] = {
     "alias": CommandAlias,
     "connect": CommandConnect,
+    "browse": CommandBrowse,
     "disconnect": CommandDisconnect,
+    "edit": CommandEdit,
     "exit": CommandExit,
+    "help": CommandHelp,
     "install": CommandInstall,
     "jobs": CommandJobs,
     # these are aliases for the above commands
     "job": CommandJobs,
     "quit": CommandExit,
 }
+
+_command_aliases: Set[str] = {"job", "quit"}

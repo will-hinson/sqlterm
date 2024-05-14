@@ -277,6 +277,32 @@ class PostgresInspector(SqlInspector):
                 SqlObject(type_name, type=SqlObjectType.TABLE, children=set())
             )
 
+    def _populate_views(
+        self: "PostgresInspector",
+        schemas_by_database: Dict[str, Dict[str, SqlObject]],
+        current_database: str,
+        connection: Connection,
+    ) -> None:
+        for schema_name, view_name in self._fetch_query_results(
+            """
+            SELECT DISTINCT
+                schemaname,
+                viewname
+            FROM
+                pg_catalog.pg_views;
+            """,
+            connection=connection,
+        ):
+            children: Set[SqlObject] | None = self._get_columns_for_table(
+                current_database, schema_name, view_name
+            )
+            if children is None:
+                children = set()
+
+            schemas_by_database[current_database][schema_name].children.add(
+                SqlObject(view_name, type=SqlObjectType.VIEW, children=children)
+            )
+
     def refresh_structure(self: "PostgresInspector") -> None:
         connection: Connection = self.parent.make_connection()
 
@@ -298,6 +324,7 @@ class PostgresInspector(SqlInspector):
             self._populate_functions,
             self._populate_procedures,
             self._populate_tables,
+            self._populate_views,
         ):
             populate_func(
                 schemas_by_database,

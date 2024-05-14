@@ -317,6 +317,7 @@ class SqliteInspector(SqlInspector):
                     name=pragma_name,
                     type=SqlObjectType.PRAGMA,
                     children=returned_columns,
+                    builtin=True,
                 )
             )
 
@@ -326,6 +327,7 @@ class SqliteInspector(SqlInspector):
                     SqlObject(
                         name=f"pragma_{pragma_name}()",
                         type=SqlObjectType.FUNCTION_TABLE_VALUED,
+                        builtin=True,
                         children=returned_columns,
                     )
                 )
@@ -351,6 +353,7 @@ class SqliteInspector(SqlInspector):
                     name=function_name.upper(),
                     type=SqlObjectType.FUNCTION_SCALAR,
                     children=set(),
+                    builtin=True,
                 )
             )
 

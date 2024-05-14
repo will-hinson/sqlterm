@@ -40,12 +40,12 @@ class SqlitePromptModel(ConnectionPromptModel):
         suggestions: List[Suggestion] = [
             Suggestion(
                 filename,
+                -len(os.path.split(user_input)[-1]),
                 (
                     "file"
                     if os.path.isfile(os.path.join(user_dirname, filename))
                     else "dir"
                 ),
-                position=-len(os.path.split(user_input)[-1]),
             )
             for filename in os.listdir(user_dirname)
             if os.path.split(word_before_cursor)[-1] in filename

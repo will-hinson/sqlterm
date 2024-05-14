@@ -9,20 +9,28 @@ _command_alias_arg_parser: ArgumentParser = ArgumentParser(
     add_help=False,
     exit_on_error=False,
     prog=f"{constants.PREFIX_SQLTERM_COMMAND}alias",
+    description="A set of commands for working with database connection aliases",
 )
 
 _sub_parsers = _command_alias_arg_parser.add_subparsers(dest="subcommand")
 _sub_parsers.required = True
 
-_command_alias_create_parser = _sub_parsers.add_parser("create")
+_command_alias_create_parser = _sub_parsers.add_parser(
+    "create",
+    help="Creates an alias with the specified name for the provided connection string",
+)
 _command_alias_create_parser.add_argument("alias_name", type=str)
 _command_alias_create_parser.add_argument(
     "connection_string", type=str, nargs="?", default=None
 )
 
-_command_alias_list_parser = _sub_parsers.add_parser("list")
+_command_alias_list_parser = _sub_parsers.add_parser(
+    "list", help="Displays a list of all currently registered aliases"
+)
 
-_command_alias_remove_parser = _sub_parsers.add_parser("remove")
+_command_alias_remove_parser = _sub_parsers.add_parser(
+    "remove", help="Removes the alias with the provided name"
+)
 _command_alias_remove_parser.add_argument("alias_name", type=str)
 
 

@@ -18,6 +18,7 @@ from ...exceptions import (
     RecordSetEnd,
     ReturnsNoRecords,
     SqlBackendMismatchException,
+    SqlQueryException,
 )
 from .dataclasses import ConnectionPromptModel
 from .enums import SaDialect
@@ -167,7 +168,10 @@ class SaBackend(SqlBackend):
             self._spool_results(manager)
 
     def fetch_results_for(self: "SaBackend", query: Query) -> List[Tuple]:
-        return list(map(tuple, self.connection.execute(query.sa_text).fetchall()))
+        try:
+            return list(map(tuple, self.connection.execute(query.sa_text).fetchall()))
+        except SQLAlchemyError as sae:
+            raise SqlQueryException("\n".join(sae.args)) from sae
 
     def get_status(self: "SaBackend") -> SqlStatusDetails:
         connection_detail: str = (
@@ -211,12 +215,17 @@ class SaBackend(SqlBackend):
             if self.dialect in sql_inspector_for_dialect
             else None
         )
+
         if inspector_type is not None:
             self.__inspector = inspector_type(parent=self)
             self.__inspector.start()
         else:
             self.__inspector = DefaultInspector(parent=self)
             self.__inspector.start()
+
+    @property
+    def inspecting(self: "SaBackend") -> bool:
+        return self.__inspector.is_alive()
 
     def invalidate_completions(self: "SaBackend") -> None:
         # don't invalidate if we don't currently have a connection
@@ -309,7 +318,7 @@ class SaBackend(SqlBackend):
                 "row loading performance may be noticeably degraded"
             )
 
-        if self.dialect is not None and isinstance(self.__inspector, DefaultInspector):
+        if self.dialect is not None and type(self.__inspector) == DefaultInspector:
             warnings.warn(
                 f"SQL dialect {self.dialect} has no defined SqlInspector. "
                 "Autocomplete suggestions will be limited to ANSI SQL keywords/functions "
@@ -372,7 +381,7 @@ class SaBackend(SqlBackend):
 
             # output the table if there is one
             if table is not None:
-                print(table)
+                self.parent.context.backends.prompt.display_table(table)
 
         return record_sets
 
