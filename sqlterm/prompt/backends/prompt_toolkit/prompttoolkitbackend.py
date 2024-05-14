@@ -1,8 +1,15 @@
 import functools
+import shutil
+import time
 import traceback
 from typing import Any, Callable, Dict, Iterable, List, Tuple
 
-from prompt_toolkit import print_formatted_text, prompt, PromptSession, shortcuts
+from prompt_toolkit import (
+    print_formatted_text,
+    prompt,
+    PromptSession,
+    shortcuts,
+)
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.document import Document
@@ -10,6 +17,10 @@ from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.key_processor import KeyPressEvent
 from prompt_toolkit.keys import Keys
+from prompt_toolkit.layout import ScrollablePane
+from prompt_toolkit.layout.containers import HSplit, VSplit, Window, WindowAlign
+from prompt_toolkit.layout.controls import FormattedTextControl
+from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.processors import Processor, TabsProcessor
 from prompt_toolkit.styles import (
     BaseStyle,
@@ -18,17 +29,21 @@ from prompt_toolkit.styles import (
     style_from_pygments_cls,
 )
 from prompt_toolkit.validation import Validator, ValidationError
-from pygments.styles import get_style_by_name
+from pygments.styles import get_style_by_name, get_all_styles
+from pygments.token import Token
 import sqlparse
 
 from .... import constants
 from ...abstract.promptbackend import PromptBackend
 from .completers import DefaultCompleter
-from ...dataclasses import InputModel, SqlStatusDetails, Suggestion
+from ....config import SqlTermConfig
+from .controls import ObjectBrowser, SqlObjectView
+from ...dataclasses import InputModel, SqlReference, SqlStatusDetails, Suggestion
 from ...enums import PromptType
 from ...exceptions import UserExit
-from ....sql.generic.dataclasses import SqlStructure
+from ....sql.generic.dataclasses import SqlObject, SqlStructure
 from ....sql.generic.enums.sqldialect import SqlDialect
+from ....sql.exceptions import DisconnectedException
 from .sqltermlexer import SqlTermLexer
 
 
@@ -82,8 +97,21 @@ class PromptToolkitBackend(PromptBackend):
     __session: PromptSession
     __current_statement_index: int
 
-    def __init__(self: "PromptToolkitBackend", *args: Tuple, **kwargs: Dict) -> None:
-        super().__init__()
+    __dialect_escape_chars: Dict[SqlDialect, str] = {
+        SqlDialect.GENERIC: '"',
+        SqlDialect.MYSQL: "`",
+        SqlDialect.POSTGRES: '"',
+        SqlDialect.SQLITE: '"',
+        SqlDialect.TSQL: '"',
+    }
+
+    def __init__(
+        self: "PromptToolkitBackend",
+        config: SqlTermConfig,
+        *args: Tuple,
+        **kwargs: Dict,
+    ) -> None:
+        super().__init__(config=config)
 
         self.__completer = DefaultCompleter()
         self.__lexer = self._default_lexer
@@ -99,7 +127,7 @@ class PromptToolkitBackend(PromptBackend):
             style=merge_styles(
                 [
                     self._default_style,
-                    style_from_pygments_cls(get_style_by_name("dracula")),
+                    style_from_pygments_cls(self._get_style_for_config()),
                 ]
             ),
             completer=self.__completer,
@@ -247,6 +275,32 @@ class PromptToolkitBackend(PromptBackend):
             else:
                 # otherwise, just remove an individual character like a regular backspace
                 event.current_buffer.delete_before_cursor()
+
+        @bindings.add("c-b")
+        def binding_ctrl_b(event: KeyPressEvent) -> None:
+            try:
+                dialect_escape_char: str = (
+                    self.__dialect_escape_chars[self.dialect]
+                    if self.dialect in self.__dialect_escape_chars
+                    else '"'
+                )
+                object_browser_result: SqlReference | None = (
+                    self.display_object_browser(show_loading=False)
+                )
+
+                if object_browser_result is not None:
+                    event.current_buffer.insert_text(
+                        ".".join(
+                            dialect_escape_char
+                            + sql_object.name.replace(
+                                dialect_escape_char, dialect_escape_char * 2
+                            )
+                            + dialect_escape_char
+                            for sql_object in object_browser_result.hierarchy
+                        )
+                    )
+            except DisconnectedException:
+                ...
 
         # NOTE: disable the default i-search
         @bindings.add("c-s")
@@ -397,6 +451,27 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add("tab")
         def binding_tab(event: KeyPressEvent) -> None:
+            # check if there is a multiline selection and indent all lines if so
+            if (
+                event.app.current_buffer.selection_state is not None
+                and len(target_lines := selected_lines(event)) > 1
+            ):
+                event.current_buffer.text = event.current_buffer.transform_lines(
+                    target_lines,
+                    lambda line: (
+                        " "
+                        * (
+                            (
+                                constants.SPACES_IN_TAB
+                                - (len(line) - len(line.lstrip(" ")))
+                                % constants.SPACES_IN_TAB
+                            )
+                        )
+                    )
+                    + line,
+                )
+                return
+
             # map tab to four spaces
             event.app.current_buffer.insert_text(
                 " "
@@ -438,22 +513,54 @@ class PromptToolkitBackend(PromptBackend):
 
     @property
     def _default_style(self: "PromptToolkitBackend") -> BaseStyle:
+        # pylint: disable=protected-access
+        style_for_config = self._get_style_for_config()
+        colors: Dict[Any, str] = {
+            token_type: (
+                style_for_config._styles[token_type][0]  # type: ignore
+                if style_for_config._styles[token_type][0] != ""  # type: ignore
+                else "ffffff"
+            )
+            for token_type in (
+                Token.Error,
+                Token.Keyword,
+                Token.Literal.String.Symbol,
+                Token.Name.Builtin,
+                Token.Text,
+            )
+        }
+        # pylint: enable=protected-access
+
         return Style.from_dict(
             {
-                "bottom-toolbar": "bg:#222222 fg:ansibrightcyan noreverse",
-                "bottom-toolbar.icon": "bg:#222222 fg:ansibrightcyan noreverse",
-                "bottom-toolbar.info": "fg:azure",
+                "bottom-toolbar": f"bg:#222222 fg:#{colors[Token.Literal.String.Symbol]} noreverse",
+                "bottom-toolbar.icon": (
+                    f"bg:#222222 fg:#{colors[Token.Name.Builtin]} noreverse"
+                ),
+                "bottom-toolbar.info": f"fg:#{colors[Token.Text]}",
                 "bottom-toolbar.text": "fg:darkgray",
                 "error.type": "fg:ansibrightred",
                 "error.message": "fg:ansibrightred",
-                "prompt-cell.bracket": "fg:azure",
-                "prompt-cell.number": "fg:cadetblue bold",
+                "prompt-cell.bracket": f"fg:#{colors[Token.Text]}",
+                "prompt-cell.number": f"fg:#{colors[Token.Name.Builtin]} bold",
                 "line-number": "fg:darkgray",
                 "message.info": "fg:darkgray",
-                "message.progress": "fg:ansibrightcyan",
-                "message.sql": "fg:ansibrightcyan",
-                "shell.command-sigil": "fg:darkgray",
-                "shell.command": "fg:cadetblue",
+                "message.progress": f"fg:#{colors[Token.Literal.String.Symbol]}",
+                "message.sql": f"fg:#{colors[Token.Name.Builtin]}",
+                "object-browser.icon-expand": "fg:darkgray",
+                "object-browser.icon-column": "fg:whitesmoke",
+                "object-browser.icon-collapse": "fg:darkgray",
+                "object-browser.icon-database": "fg:cadetblue",
+                "object-browser.icon-function-scalar": "fg:springgreen",
+                "object-browser.icon-function-table-valued": "fg:palegreen",
+                "object-browser.icon-parameter": "fg:cornsilk",
+                "object-browser.icon-procedure": "fg:gold",
+                "object-browser.icon-schema": "fg:navajowhite",
+                "object-browser.icon-table": "fg:skyblue",
+                "object-browser.icon-view": "fg:salmon",
+                "object-browser.object-name": "fg:azure",
+                "shell.command-sigil": f"fg:#{colors[Token.Literal.String.Symbol]}",
+                "shell.command": f"fg:#{colors[Token.Keyword]}",
             }
         )
 
@@ -497,12 +604,49 @@ class PromptToolkitBackend(PromptBackend):
 
     def display_message_sql(self: "PromptToolkitBackend", message: str) -> None:
         print_formatted_text(
-            FormattedText([("class:message.sql", message)]), style=self._default_style
+            FormattedText(
+                [
+                    ("class:message.sql", message),
+                ]
+            ),
+            style=self._default_style,
         )
 
-    def display_progress(
-        self: "PromptToolkitBackend", *progress_messages: List[str]
-    ) -> None:
+    def display_object_browser(
+        self: "PromptToolkitBackend", show_loading: bool
+    ) -> SqlReference | None:
+        # ensure that we actually have a sql connection
+        if not self.parent.context.backends.sql.connected:
+            raise DisconnectedException(
+                "There is no active SQL connection. Cannot display object browser."
+            )
+
+        # wait until the the sql backend is done inspecting
+        self.hide_cursor()
+        load_char_offset: int = 0
+        while self.parent.context.backends.sql.inspecting:
+            if show_loading:
+                self.display_progress(
+                    constants.PROGRESS_CHARACTERS[load_char_offset],
+                    " Inspecting database objects...",
+                )
+
+                load_char_offset = (load_char_offset + 1) % len(
+                    constants.PROGRESS_CHARACTERS
+                )
+
+            time.sleep(0.1)
+
+        if show_loading:
+            print("\r", end="")
+            print(" " * (shutil.get_terminal_size().columns - 1), end="")
+            print("\r", end="")
+
+        self.show_cursor()
+
+        return self._show_object_browser(self.__completer.inspector_structure)
+
+    def display_progress(self: "PromptToolkitBackend", *progress_messages: str) -> None:
         print_formatted_text(
             FormattedText(
                 [
@@ -517,6 +661,9 @@ class PromptToolkitBackend(PromptBackend):
         # NOTE: print_formatted_text() doesn't allow '\r' as an end string so
         # we have to write it manually here
         print(end="\r")
+
+    def display_table(self: "PromptToolkitBackend", table: str) -> None:
+        print(table)
 
     def _get_bottom_toolbar(self: "PromptToolkitBackend") -> List[Tuple]:
         status_details: SqlStatusDetails = self.parent.context.backends.sql.get_status()
@@ -556,6 +703,13 @@ class PromptToolkitBackend(PromptBackend):
             raise UserExit("EOFError while prompting for input") from eof
         except KeyboardInterrupt:
             return ""
+
+    def _get_style_for_config(self: "PromptToolkitBackend") -> None:
+        return (
+            get_style_by_name(self.config.color_scheme)
+            if self.config.color_scheme in get_all_styles()
+            else get_style_by_name("dracula")
+        )
 
     def hide_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()
@@ -662,3 +816,139 @@ class PromptToolkitBackend(PromptBackend):
 
     def show_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()
+
+    def _build_object_browser(
+        self: "PromptToolkitBackend", structure: SqlStructure
+    ) -> ObjectBrowser:
+        bindings: KeyBindings = KeyBindings()
+
+        object_browser_layout: Layout = Layout(
+            HSplit(
+                [
+                    ScrollablePane(
+                        objects_hsplit := HSplit(
+                            [
+                                SqlObjectView(root_object, index)
+                                for index, root_object in enumerate(
+                                    filter(
+                                        lambda root_object: not root_object.builtin,
+                                        sorted(
+                                            structure.objects,
+                                            key=lambda sql_object: sql_object.name,
+                                        ),
+                                    )
+                                )
+                            ]
+                        )
+                    ),
+                    VSplit(
+                        [
+                            Window(
+                                content=FormattedTextControl(
+                                    self._get_bottom_toolbar()
+                                ),
+                                height=1,
+                                style="class:bottom-toolbar",
+                                align=WindowAlign.LEFT,
+                            ),
+                            Window(
+                                content=FormattedTextControl(
+                                    [
+                                        ("", "[Arrows] Navigate"),
+                                        ("", " "),
+                                        ("", "[^S] Search"),
+                                        ("", " "),
+                                        ("", "[q] Quit"),
+                                    ]
+                                ),
+                                height=1,
+                                style="class:bottom-toolbar",
+                                align=WindowAlign.RIGHT,
+                            ),
+                        ]
+                    ),
+                ]
+            )
+        )
+
+        # store a reference to the parent hsplit in all sqlobjectviews
+        for child in objects_hsplit.children:
+            child.parent = objects_hsplit
+
+        focus_index: int = 0
+
+        @bindings.add(Keys.Enter)
+        def binding_accept(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+
+            current_index: int = focus_index
+            current_hierarchy_level: int = objects_hsplit.children[
+                current_index
+            ].indent_level
+            object_hierarchy: List[SqlObject] = [
+                objects_hsplit.children[current_index].sql_object
+            ]
+            while current_hierarchy_level > 0 and current_index > 0:
+                current_object: SqlObjectView = objects_hsplit.children[current_index]
+                if (
+                    new_hierarchy_level := current_object.indent_level
+                ) < current_hierarchy_level:
+                    current_hierarchy_level = new_hierarchy_level
+                    object_hierarchy.append(current_object.sql_object)
+
+                current_index -= 1
+
+            object_hierarchy.reverse()
+            event.app.result = SqlReference(hierarchy=object_hierarchy)
+            event.app.exit()
+
+        @bindings.add(Keys.Left)
+        def binding_collapse_or_find_parent(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = objects_hsplit.children[focus_index].collapse_or_find_parent(
+                event.app.layout
+            )
+
+        @bindings.add(Keys.Right)
+        def binding_expand(_: KeyPressEvent) -> None:
+            nonlocal focus_index
+            objects_hsplit.children[focus_index].expand_if_collapsed()
+
+        @bindings.add("space")
+        def binding_expand_or_collapse(_: KeyPressEvent) -> None:
+            nonlocal focus_index
+            objects_hsplit.children[focus_index].toggle_collapse()
+
+        @bindings.add(Keys.Down)
+        def binding_next_object(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = min(focus_index + 1, len(objects_hsplit.children) - 1)
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
+        @bindings.add(Keys.Up)
+        def binding_previous_object(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = max(0, focus_index - 1)
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
+        @bindings.add("c-c")
+        @bindings.add("c-d")
+        @bindings.add("q")
+        def binding_quit(event: KeyPressEvent) -> None:
+            event.app.exit()
+
+        return ObjectBrowser(
+            layout=object_browser_layout,
+            key_bindings=bindings,
+            full_screen=True,
+            max_render_postpone_time=1.0,
+            style=self._default_style,
+        )
+
+    def _show_object_browser(
+        self: "PromptToolkitBackend", structure: SqlStructure
+    ) -> SqlReference | None:
+        object_browser: ObjectBrowser = self._build_object_browser(structure)
+        object_browser.run(in_thread=True)
+
+        return object_browser.result

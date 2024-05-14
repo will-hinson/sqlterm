@@ -39,6 +39,10 @@ class SqlBackend(metaclass=ABCMeta):
     @abstractmethod
     def invalidate_completions(self: "SqlBackend") -> None: ...
 
+    @property
+    @abstractmethod
+    def inspecting(self: "SqlBackend") -> bool: ...
+
     @abstractmethod
     def make_query(self: "SqlBackend", query_str: str) -> Query: ...
 

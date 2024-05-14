@@ -9,6 +9,7 @@ class SqlObject:
     name: str
     type: SqlObjectType
     children: Set["SqlObject"]
+    builtin: bool = False
     is_alias: bool = False
 
     def flatten(self: "SqlObject") -> Set["SqlObject"]:

@@ -5,22 +5,25 @@ from typing import Callable, Dict
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import StyleAndTextTuples
 from prompt_toolkit.lexers import Lexer, PygmentsLexer
-
-# pylint: disable=no-name-in-module
-from pygments.lexers import (
-    BashLexer,
-    BatchLexer,
-    MySqlLexer,
-    PostgresLexer,
-    SqlLexer,
-    TransactSqlLexer,
-)
-
-# pylint: enable=no-name-in-module
+from pygments.lexers.sql import MySqlLexer, PostgresLexer, SqlLexer, TransactSqlLexer
+from pygments.lexers.shell import BashLexer, BatchLexer
+from pygments.token import String, Token
 
 from .... import constants
 from ....sql.generic.enums import SqlDialect
 from ....prompt.abstract import PromptBackend
+
+
+class _CustomAnsiSqlLexer(SqlLexer): ...
+
+
+class _CustomMySqlLexer(MySqlLexer): ...
+
+
+class _CustomPostgresLexer(PostgresLexer): ...
+
+
+class _CustomTransactSqlLexer(TransactSqlLexer): ...
 
 
 class SqlTermLexer(Lexer):
@@ -35,11 +38,29 @@ class SqlTermLexer(Lexer):
     ) -> None:
         self.__parent = parent
 
-        self.default_sql_lexer = PygmentsLexer(SqlLexer)
+        # hotpatch the sql lexers with a custom class for double-quoted object names. for
+        # whatever reason, the default can lead to double-quoted strings being rendered in
+        # a really ugly color. we change them to be single-quoted strings functionally
+        for custom_type, base_type in {
+            _CustomAnsiSqlLexer: SqlLexer,
+            _CustomMySqlLexer: MySqlLexer,
+            _CustomPostgresLexer: PostgresLexer,
+            _CustomTransactSqlLexer: TransactSqlLexer,
+        }.items():
+            custom_type.tokens["root"] = list(
+                filter(
+                    lambda token_tuple: token_tuple[-1] != Token.Literal.String.Symbol,
+                    base_type.tokens["root"],
+                )
+            ) + [
+                (r'"(""|[^"])*"', String.Single),
+            ]
+
+        self.default_sql_lexer = PygmentsLexer(_CustomAnsiSqlLexer)
         self.dialect_lexers = {
-            SqlDialect.MYSQL: PygmentsLexer(MySqlLexer),
+            SqlDialect.MYSQL: PygmentsLexer(_CustomMySqlLexer),
             SqlDialect.POSTGRES: PygmentsLexer(PostgresLexer),
-            SqlDialect.TSQL: PygmentsLexer(TransactSqlLexer),
+            SqlDialect.TSQL: PygmentsLexer(_CustomTransactSqlLexer),
         }
 
         if os.name == "nt":
@@ -92,7 +113,10 @@ class SqlTermLexer(Lexer):
             case constants.PREFIX_SQLTERM_COMMAND:
                 return lambda line_number: [
                     ("", leading_whitespace),
-                    ("class:shell.command-sigil", constants.PREFIX_SQLTERM_COMMAND),
+                    (
+                        "class:shell.command-sigil",
+                        constants.PREFIX_SQLTERM_COMMAND,
+                    ),
                     (
                         "class:shell.command",
                         document.lines[line_number][

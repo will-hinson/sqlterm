@@ -1,7 +1,7 @@
-from enum import auto, Enum
+from enum import auto, StrEnum
 
 
-class SqlObjectType(Enum):
+class SqlObjectType(StrEnum):
     CATALOG = auto()
     COLUMN = auto()
     DATABASE = auto()

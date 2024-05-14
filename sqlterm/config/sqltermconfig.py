@@ -20,6 +20,7 @@ _config_upgrade_order: List[
 class SqlTermConfig:
     version: str
     aliases: Dict[str, Alias]
+    color_scheme: str
 
     @staticmethod
     def cannot_upgrade(
@@ -73,7 +74,9 @@ class SqlTermConfig:
 
     @staticmethod
     def make_default() -> "SqlTermConfig":
-        return SqlTermConfig(version=constants.CONFIG_VERSION, aliases={})
+        return SqlTermConfig(
+            version=constants.CONFIG_VERSION, aliases={}, color_scheme="dracula"
+        )
 
     def to_file(self: "SqlTermConfig", output_path: str) -> None:
         with open(output_path, "w", encoding="utf-8") as output_file:
