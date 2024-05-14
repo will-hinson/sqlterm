@@ -377,7 +377,7 @@ class SaBackend(SqlBackend):
 
             # output the table if there is one
             if table is not None:
-                print(table)
+                self.parent.context.backends.prompt.display_table(table)
 
         return record_sets
 

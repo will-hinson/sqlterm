@@ -9,10 +9,12 @@ from ...config import SqlTermConfig
 
 
 class PromptBackend(metaclass=ABCMeta):
+    config: SqlTermConfig
     _dialect: SqlDialect
     parent: "sqlterm.SqlTerm"
 
     def __init__(self: "PromptBackend", config: SqlTermConfig) -> None:
+        self.config = config
         self._dialect = SqlDialect.GENERIC
 
     @abstractmethod
@@ -45,6 +47,9 @@ class PromptBackend(metaclass=ABCMeta):
     def display_progress(
         self: "PromptBackend", *progress_messages: List[str]
     ) -> None: ...
+
+    @abstractmethod
+    def display_table(self: "PromptBackend", table: str) -> None: ...
 
     @abstractmethod
     def get_command(self: "PromptBackend", initial_input: str | None = None) -> str: ...

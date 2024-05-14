@@ -72,6 +72,10 @@ class SqlTerm:
     def handle_command(self: "SqlTerm", command: str) -> None:
         command = command.strip()
 
+        # do nothing if the command was an empty one
+        if len(command) == 0:
+            return
+
         match command[:1]:
             case constants.PREFIX_SHELL_COMMAND:
                 self._handle_command_shell(command[1:])

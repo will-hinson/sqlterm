@@ -30,6 +30,7 @@ from prompt_toolkit.styles import (
 )
 from prompt_toolkit.validation import Validator, ValidationError
 from pygments.styles import get_style_by_name, get_all_styles
+from pygments.token import Token
 import sqlparse
 
 from .... import constants
@@ -118,13 +119,7 @@ class PromptToolkitBackend(PromptBackend):
             style=merge_styles(
                 [
                     self._default_style,
-                    style_from_pygments_cls(
-                        get_style_by_name(
-                            config.color_scheme
-                            if config.color_scheme in get_all_styles()
-                            else "dracula"
-                        )
-                    ),
+                    style_from_pygments_cls(self._get_style_for_config()),
                 ]
             ),
             completer=self.__completer,
@@ -501,22 +496,40 @@ class PromptToolkitBackend(PromptBackend):
 
     @property
     def _default_style(self: "PromptToolkitBackend") -> BaseStyle:
+        # pylint: disable=protected-access
+        style_for_config = self._get_style_for_config()
+        colors: Dict[Any, str] = {
+            token_type: (
+                style_for_config._styles[token_type][0]  # type: ignore
+                if style_for_config._styles[token_type][0] != ""  # type: ignore
+                else "ffffff"
+            )
+            for token_type in (
+                Token.Error,
+                Token.Keyword,
+                Token.Literal.String.Symbol,
+                Token.Name.Builtin,
+                Token.Text,
+            )
+        }
+        # pylint: enable=protected-access
+
         return Style.from_dict(
             {
-                "bottom-toolbar": "bg:#222222 fg:ansibrightcyan noreverse",
-                "bottom-toolbar.icon": "bg:#222222 fg:ansibrightcyan noreverse",
-                "bottom-toolbar.info": "fg:azure",
+                "bottom-toolbar": f"bg:#222222 fg:#{colors[Token.Literal.String.Symbol]} noreverse",
+                "bottom-toolbar.icon": (
+                    f"bg:#222222 fg:#{colors[Token.Name.Builtin]} noreverse"
+                ),
+                "bottom-toolbar.info": f"fg:#{colors[Token.Text]}",
                 "bottom-toolbar.text": "fg:darkgray",
                 "error.type": "fg:ansibrightred",
                 "error.message": "fg:ansibrightred",
-                "prompt-cell.bracket": "fg:azure",
-                "prompt-cell.number": "fg:cadetblue bold",
+                "prompt-cell.bracket": f"fg:#{colors[Token.Text]}",
+                "prompt-cell.number": f"fg:#{colors[Token.Name.Builtin]} bold",
                 "line-number": "fg:darkgray",
                 "message.info": "fg:darkgray",
-                "message.progress": "fg:ansibrightcyan",
-                "message.sql": "fg:ansibrightcyan",
-                "shell.command-sigil": "fg:darkgray",
-                "shell.command": "fg:cadetblue",
+                "message.progress": f"fg:#{colors[Token.Literal.String.Symbol]}",
+                "message.sql": f"fg:#{colors[Token.Name.Builtin]}",
                 "object-browser.icon-expand": "fg:darkgray",
                 "object-browser.icon-column": "fg:whitesmoke",
                 "object-browser.icon-collapse": "fg:darkgray",
@@ -529,6 +542,8 @@ class PromptToolkitBackend(PromptBackend):
                 "object-browser.icon-table": "fg:skyblue",
                 "object-browser.icon-view": "fg:salmon",
                 "object-browser.object-name": "fg:azure",
+                "shell.command-sigil": f"fg:#{colors[Token.Literal.String.Symbol]}",
+                "shell.command": f"fg:#{colors[Token.Keyword]}",
             }
         )
 
@@ -572,7 +587,12 @@ class PromptToolkitBackend(PromptBackend):
 
     def display_message_sql(self: "PromptToolkitBackend", message: str) -> None:
         print_formatted_text(
-            FormattedText([("class:message.sql", message)]), style=self._default_style
+            FormattedText(
+                [
+                    ("class:message.sql", message),
+                ]
+            ),
+            style=self._default_style,
         )
 
     def display_object_browser(
@@ -625,6 +645,9 @@ class PromptToolkitBackend(PromptBackend):
         # we have to write it manually here
         print(end="\r")
 
+    def display_table(self: "PromptToolkitBackend", table: str) -> None:
+        print(table)
+
     def _get_bottom_toolbar(self: "PromptToolkitBackend") -> List[Tuple]:
         status_details: SqlStatusDetails = self.parent.context.backends.sql.get_status()
 
@@ -663,6 +686,13 @@ class PromptToolkitBackend(PromptBackend):
             raise UserExit("EOFError while prompting for input") from eof
         except KeyboardInterrupt:
             return ""
+
+    def _get_style_for_config(self: "PromptToolkitBackend") -> None:
+        return (
+            get_style_by_name(self.config.color_scheme)
+            if self.config.color_scheme in get_all_styles()
+            else get_style_by_name("dracula")
+        )
 
     def hide_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()

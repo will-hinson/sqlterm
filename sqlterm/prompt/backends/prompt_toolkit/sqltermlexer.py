@@ -113,7 +113,10 @@ class SqlTermLexer(Lexer):
             case constants.PREFIX_SQLTERM_COMMAND:
                 return lambda line_number: [
                     ("", leading_whitespace),
-                    ("class:shell.command-sigil", constants.PREFIX_SQLTERM_COMMAND),
+                    (
+                        "class:shell.command-sigil",
+                        constants.PREFIX_SQLTERM_COMMAND,
+                    ),
                     (
                         "class:shell.command",
                         document.lines[line_number][
