@@ -5,7 +5,7 @@
 
 <br />
 
-![An example SQLTerm session](https://github.com/will-hinson/sqlterm/blob/wip/object-browser/resources/example-session3.png?raw=true)
+![An example SQLTerm session](https://github.com/will-hinson/sqlterm/blob/dev/resources/example-session3.png?raw=true)
 
 ## Installation
 The latest release version of SQLTerm may be installed from [PyPI](https://pypi.org/project/sqlterm/) using `pip`:

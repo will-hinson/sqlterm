@@ -559,8 +559,9 @@ class PromptToolkitBackend(PromptBackend):
                 "object-browser.icon-table": "fg:skyblue",
                 "object-browser.icon-view": "fg:salmon",
                 "object-browser.object-name": "fg:azure",
-                "shell.command-sigil": f"fg:#{colors[Token.Literal.String.Symbol]}",
-                "shell.command": f"fg:#{colors[Token.Keyword]}",
+                "shell.command": f"fg:#{colors[Token.Keyword]} bold",
+                "shell.command-args": f"fg:#{colors[Token.Text]} italic",
+                "shell.command-sigil": f"fg:#{colors[Token.Literal.String.Symbol]} bold",
             }
         )
 
