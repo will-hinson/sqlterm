@@ -37,7 +37,7 @@ from .... import constants
 from ...abstract.promptbackend import PromptBackend
 from .completers import DefaultCompleter
 from ....config import SqlTermConfig
-from .controls import ObjectBrowser, SqlObjectView
+from .controls import ObjectBrowser, SqlObjectView, SelectionCursorShapeConfig
 from ...dataclasses import InputModel, SqlReference, SqlStatusDetails, Suggestion
 from ...enums import PromptType
 from ...exceptions import UserExit
@@ -131,6 +131,7 @@ class PromptToolkitBackend(PromptBackend):
                 ]
             ),
             completer=self.__completer,
+            cursor=SelectionCursorShapeConfig(),
             **kwargs,
         )
         self.__current_statement_index = 0
