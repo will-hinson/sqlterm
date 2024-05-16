@@ -489,6 +489,17 @@ class PromptToolkitBackend(PromptBackend):
                     )
                     + line,
                 )
+
+                # select all of the lines we indented
+                event.app.current_buffer.cursor_position = 0
+                if target_lines[0] > 0:
+                    event.app.current_buffer.cursor_down(target_lines[0])
+                event.app.current_buffer.start_selection()
+                event.app.current_buffer.cursor_down(target_lines[-1] - target_lines[0])
+                event.app.current_buffer.cursor_right(
+                    len(event.current_buffer.document.lines[target_lines[-1]])
+                )
+
                 return
 
             # map tab to four spaces
@@ -514,6 +525,17 @@ class PromptToolkitBackend(PromptBackend):
                     target_lines,
                     lambda line: line[4:] if line.startswith(" " * 4) else line,
                 )
+
+                # select all of the lines we dedented
+                event.app.current_buffer.cursor_position = 0
+                if target_lines[0] > 0:
+                    event.app.current_buffer.cursor_down(target_lines[0])
+                event.app.current_buffer.start_selection()
+                event.app.current_buffer.cursor_down(target_lines[-1] - target_lines[0])
+                event.app.current_buffer.cursor_right(
+                    len(event.current_buffer.document.lines[target_lines[-1]])
+                )
+
                 return
 
             # map backtab to four leading spaces
