@@ -371,6 +371,7 @@ class PromptToolkitBackend(PromptBackend):
                 for line_index in line_indexes
             ]
             cursor_col: int = event.app.current_buffer.document.cursor_position_col
+            cursor_line: int = event.app.current_buffer.document.cursor_position_row
 
             event.app.current_buffer.text = "\n".join(
                 event.app.current_buffer.document.lines[: line_indexes[0]]
@@ -378,13 +379,21 @@ class PromptToolkitBackend(PromptBackend):
                 + event.app.current_buffer.document.lines[line_indexes[-1] + 2 :]
             )
 
+            # check if there was originally a selection
             if orig_cursor_position is None:
-                event.app.current_buffer.cursor_down()
-                event.app.current_buffer.cursor_right(
-                    count=cursor_col
-                    - event.app.current_buffer.document.cursor_position_col
+                # seek to column 0
+                event.app.current_buffer.cursor_position -= (
+                    event.app.current_buffer.document.cursor_position_col
                 )
+
+                # check if the cursor moved down or not. if it didn't, seek down a line
+                if cursor_line == event.app.current_buffer.document.cursor_position_row:
+                    event.app.current_buffer.cursor_down()
+
+                # seek to the old column where the cursor was
+                event.app.current_buffer.cursor_right(cursor_col)
             else:
+                # if there was a selection, recreate the selection on the new relative lines
                 event.app.current_buffer.cursor_position = (
                     orig_cursor_position + len(next_line) + 1
                 )
@@ -426,6 +435,7 @@ class PromptToolkitBackend(PromptBackend):
                 for line_index in line_indexes
             ]
             cursor_col: int = event.app.current_buffer.document.cursor_position_col
+            cursor_line: int = event.app.current_buffer.document.cursor_position_row
 
             event.app.current_buffer.text = "\n".join(
                 event.app.current_buffer.document.lines[: line_indexes[0] - 1]
@@ -433,13 +443,21 @@ class PromptToolkitBackend(PromptBackend):
                 + event.app.current_buffer.document.lines[line_indexes[-1] + 1 :]
             )
 
+            # check if there was originally a selection
             if orig_cursor_position is None:
-                event.app.current_buffer.cursor_up()
-                event.app.current_buffer.cursor_right(
-                    count=cursor_col
-                    - event.app.current_buffer.document.cursor_position_col
+                # seek to column 0
+                event.app.current_buffer.cursor_position -= (
+                    event.app.current_buffer.document.cursor_position_col
                 )
+
+                # check if the cursor moved up or not. if it didn't, seek up a line
+                if cursor_line == event.app.current_buffer.document.cursor_position_row:
+                    event.app.current_buffer.cursor_up()
+
+                # seek to the old column where the cursor was
+                event.app.current_buffer.cursor_right(cursor_col)
             else:
+                # if there was a selection, recreate the selection on the new relative lines
                 event.app.current_buffer.cursor_position = (
                     orig_cursor_position - len(prev_line) - 1
                 )
