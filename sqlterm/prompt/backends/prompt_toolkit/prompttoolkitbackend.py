@@ -468,7 +468,7 @@ class PromptToolkitBackend(PromptBackend):
                     else selection_end - len(prev_line) - 1
                 )
 
-        @bindings.add("tab")
+        @bindings.add(Keys.Tab)
         def binding_tab(event: KeyPressEvent) -> None:
             # check if there is a multiline selection and indent all lines if so
             if (
@@ -503,11 +503,32 @@ class PromptToolkitBackend(PromptBackend):
                 )
             )
 
+        @bindings.add(Keys.BackTab)
+        def binding_backtab(event: KeyPressEvent) -> None:
+            # check if there is a multiline selection and dedent all lines if so
+            if (
+                event.app.current_buffer.selection_state is not None
+                and len(target_lines := selected_lines(event)) > 1
+            ):
+                event.current_buffer.text = event.current_buffer.transform_lines(
+                    target_lines,
+                    lambda line: line[4:] if line.startswith(" " * 4) else line,
+                )
+                return
+
+            # map backtab to four leading spaces
+            if event.app.current_buffer.document.current_line.startswith(
+                " " * constants.SPACES_IN_TAB
+            ):
+                event.app.current_buffer.transform_current_line(
+                    lambda current_line: current_line[4:]
+                )
+
         @bindings.add(Keys.F5)
         def binding_f5(event: KeyPressEvent) -> None:
             event.current_buffer.validate_and_handle()
 
-        @bindings.add("c-t")
+        @bindings.add(Keys.ControlT)
         def binding_ctrl_t(event: KeyPressEvent) -> None:
             event.current_buffer.document = Document(
                 sqlparse.format(
