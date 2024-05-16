@@ -224,7 +224,7 @@ class PromptToolkitBackend(PromptBackend):
             event.current_buffer.exit_selection()
             event.current_buffer.auto_up()
 
-        @bindings.add("backspace")
+        @bindings.add(Keys.Backspace)
         def binding_backspace(event: KeyPressEvent) -> None:
             # check if there is text currently selected that the user is trying to
             # delete by pressing backspace
@@ -277,7 +277,19 @@ class PromptToolkitBackend(PromptBackend):
                 # otherwise, just remove an individual character like a regular backspace
                 event.current_buffer.delete_before_cursor()
 
-        @bindings.add("c-b")
+        @bindings.add(Keys.ControlA)
+        def binding_ctrl_a(event: KeyPressEvent) -> None:
+            # don't do anything if the buffer is empty
+            if len(event.current_buffer.text) == 0:
+                return
+
+            # otherwise, select everything in the buffer
+            event.current_buffer.selection_state = None
+            event.current_buffer.cursor_position = 0
+            event.current_buffer.start_selection()
+            event.current_buffer.cursor_position = len(event.current_buffer.text)
+
+        @bindings.add(Keys.ControlB)
         def binding_ctrl_b(event: KeyPressEvent) -> None:
             try:
                 dialect_escape_char: str = (
@@ -304,10 +316,10 @@ class PromptToolkitBackend(PromptBackend):
                 ...
 
         # NOTE: disable the default i-search
-        @bindings.add("c-s")
+        @bindings.add(Keys.ControlS)
         def binding_ctrl_s(_: KeyPressEvent) -> None: ...
 
-        @bindings.add("enter")
+        @bindings.add(Keys.Enter)
         def binding_enter(event: KeyPressEvent) -> None:
             # check for a blank line or a shell or sqlterm command (also, show help if the user enters 'help')
             current_text_stripped: str = event.current_buffer.text.strip()
@@ -994,8 +1006,8 @@ class PromptToolkitBackend(PromptBackend):
             focus_index = max(0, focus_index - 1)
             event.app.layout.focus(objects_hsplit.children[focus_index])
 
-        @bindings.add("c-c")
-        @bindings.add("c-d")
+        @bindings.add(Keys.ControlC)
+        @bindings.add(Keys.ControlD)
         @bindings.add("q")
         def binding_quit(event: KeyPressEvent) -> None:
             event.app.exit()
