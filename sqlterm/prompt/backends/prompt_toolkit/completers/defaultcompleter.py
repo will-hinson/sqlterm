@@ -1,7 +1,8 @@
 from typing import Dict, List, Set
 
 from Levenshtein import distance
-from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.contrib.completers.system import SystemCompleter
+from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 
 from ..... import constants
@@ -33,25 +34,28 @@ class DefaultCompleter(Completer):
     inspector_structure: SqlStructure | None
     inspector_structure_flattened: Set[SqlObject] | None
 
+    _system_completer: SystemCompleter
+
     def __init__(self: "DefaultCompleter") -> None:
         super().__init__()
 
         self.inspector_structure = None
         self.inspector_structure_flattened = None
+        self._system_completer = SystemCompleter()
 
     def clear_completions(self: "DefaultCompleter") -> None:
         self.inspector_structure = None
         self.inspector_structure_flattened = None
 
     def get_completions(
-        self: "DefaultCompleter", document: Document, _
+        self: "DefaultCompleter", document: Document, complete_event: CompleteEvent
     ) -> List[Completion]:
         word_before_cursor = document.get_word_before_cursor().upper()
         if len(word_before_cursor) == 0:
             return []
 
         completions: List[Completion] = self._get_completions_unsorted(
-            document, word_before_cursor
+            document, word_before_cursor, complete_event
         )
         completions.sort(
             key=lambda completion: distance(completion.text, word_before_cursor)
@@ -60,11 +64,19 @@ class DefaultCompleter(Completer):
         return completions
 
     def _get_completions_unsorted(
-        self, document: Document, word_before_cursor: str
+        self, document: Document, word_before_cursor: str, complete_event: CompleteEvent
     ) -> List[Completion]:
         match document.current_line[:1]:
             case constants.PREFIX_SHELL_COMMAND:
-                return []
+                return list(
+                    self._system_completer.get_completions(
+                        Document(
+                            text=document.text[1:],
+                            cursor_position=document.cursor_position - 1,
+                        ),
+                        complete_event,
+                    )
+                )
             case constants.PREFIX_SQLTERM_COMMAND:
                 return self._get_completions_sqlterm_command(word_before_cursor)
             case _:

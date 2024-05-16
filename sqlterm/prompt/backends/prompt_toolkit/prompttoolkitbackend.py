@@ -37,7 +37,7 @@ from .... import constants
 from ...abstract.promptbackend import PromptBackend
 from .completers import DefaultCompleter
 from ....config import SqlTermConfig
-from .controls import ObjectBrowser, SqlObjectView
+from .controls import ObjectBrowser, SqlObjectView, SelectionCursorShapeConfig
 from ...dataclasses import InputModel, SqlReference, SqlStatusDetails, Suggestion
 from ...enums import PromptType
 from ...exceptions import UserExit
@@ -131,6 +131,7 @@ class PromptToolkitBackend(PromptBackend):
                 ]
             ),
             completer=self.__completer,
+            cursor=SelectionCursorShapeConfig(),
             **kwargs,
         )
         self.__current_statement_index = 0
@@ -370,6 +371,7 @@ class PromptToolkitBackend(PromptBackend):
                 for line_index in line_indexes
             ]
             cursor_col: int = event.app.current_buffer.document.cursor_position_col
+            cursor_line: int = event.app.current_buffer.document.cursor_position_row
 
             event.app.current_buffer.text = "\n".join(
                 event.app.current_buffer.document.lines[: line_indexes[0]]
@@ -377,13 +379,21 @@ class PromptToolkitBackend(PromptBackend):
                 + event.app.current_buffer.document.lines[line_indexes[-1] + 2 :]
             )
 
+            # check if there was originally a selection
             if orig_cursor_position is None:
-                event.app.current_buffer.cursor_down()
-                event.app.current_buffer.cursor_right(
-                    count=cursor_col
-                    - event.app.current_buffer.document.cursor_position_col
+                # seek to column 0
+                event.app.current_buffer.cursor_position -= (
+                    event.app.current_buffer.document.cursor_position_col
                 )
+
+                # check if the cursor moved down or not. if it didn't, seek down a line
+                if cursor_line == event.app.current_buffer.document.cursor_position_row:
+                    event.app.current_buffer.cursor_down()
+
+                # seek to the old column where the cursor was
+                event.app.current_buffer.cursor_right(cursor_col)
             else:
+                # if there was a selection, recreate the selection on the new relative lines
                 event.app.current_buffer.cursor_position = (
                     orig_cursor_position + len(next_line) + 1
                 )
@@ -425,6 +435,7 @@ class PromptToolkitBackend(PromptBackend):
                 for line_index in line_indexes
             ]
             cursor_col: int = event.app.current_buffer.document.cursor_position_col
+            cursor_line: int = event.app.current_buffer.document.cursor_position_row
 
             event.app.current_buffer.text = "\n".join(
                 event.app.current_buffer.document.lines[: line_indexes[0] - 1]
@@ -432,13 +443,21 @@ class PromptToolkitBackend(PromptBackend):
                 + event.app.current_buffer.document.lines[line_indexes[-1] + 1 :]
             )
 
+            # check if there was originally a selection
             if orig_cursor_position is None:
-                event.app.current_buffer.cursor_up()
-                event.app.current_buffer.cursor_right(
-                    count=cursor_col
-                    - event.app.current_buffer.document.cursor_position_col
+                # seek to column 0
+                event.app.current_buffer.cursor_position -= (
+                    event.app.current_buffer.document.cursor_position_col
                 )
+
+                # check if the cursor moved up or not. if it didn't, seek up a line
+                if cursor_line == event.app.current_buffer.document.cursor_position_row:
+                    event.app.current_buffer.cursor_up()
+
+                # seek to the old column where the cursor was
+                event.app.current_buffer.cursor_right(cursor_col)
             else:
+                # if there was a selection, recreate the selection on the new relative lines
                 event.app.current_buffer.cursor_position = (
                     orig_cursor_position - len(prev_line) - 1
                 )
@@ -449,7 +468,7 @@ class PromptToolkitBackend(PromptBackend):
                     else selection_end - len(prev_line) - 1
                 )
 
-        @bindings.add("tab")
+        @bindings.add(Keys.Tab)
         def binding_tab(event: KeyPressEvent) -> None:
             # check if there is a multiline selection and indent all lines if so
             if (
@@ -470,6 +489,17 @@ class PromptToolkitBackend(PromptBackend):
                     )
                     + line,
                 )
+
+                # select all of the lines we indented
+                event.app.current_buffer.cursor_position = 0
+                if target_lines[0] > 0:
+                    event.app.current_buffer.cursor_down(target_lines[0])
+                event.app.current_buffer.start_selection()
+                event.app.current_buffer.cursor_down(target_lines[-1] - target_lines[0])
+                event.app.current_buffer.cursor_right(
+                    len(event.current_buffer.document.lines[target_lines[-1]])
+                )
+
                 return
 
             # map tab to four spaces
@@ -484,11 +514,43 @@ class PromptToolkitBackend(PromptBackend):
                 )
             )
 
+        @bindings.add(Keys.BackTab)
+        def binding_backtab(event: KeyPressEvent) -> None:
+            # check if there is a multiline selection and dedent all lines if so
+            if (
+                event.app.current_buffer.selection_state is not None
+                and len(target_lines := selected_lines(event)) > 1
+            ):
+                event.current_buffer.text = event.current_buffer.transform_lines(
+                    target_lines,
+                    lambda line: line[4:] if line.startswith(" " * 4) else line,
+                )
+
+                # select all of the lines we dedented
+                event.app.current_buffer.cursor_position = 0
+                if target_lines[0] > 0:
+                    event.app.current_buffer.cursor_down(target_lines[0])
+                event.app.current_buffer.start_selection()
+                event.app.current_buffer.cursor_down(target_lines[-1] - target_lines[0])
+                event.app.current_buffer.cursor_right(
+                    len(event.current_buffer.document.lines[target_lines[-1]])
+                )
+
+                return
+
+            # map backtab to four leading spaces
+            if event.app.current_buffer.document.current_line.startswith(
+                " " * constants.SPACES_IN_TAB
+            ):
+                event.app.current_buffer.transform_current_line(
+                    lambda current_line: current_line[4:]
+                )
+
         @bindings.add(Keys.F5)
         def binding_f5(event: KeyPressEvent) -> None:
             event.current_buffer.validate_and_handle()
 
-        @bindings.add("c-t")
+        @bindings.add(Keys.ControlT)
         def binding_ctrl_t(event: KeyPressEvent) -> None:
             event.current_buffer.document = Document(
                 sqlparse.format(
@@ -559,8 +621,9 @@ class PromptToolkitBackend(PromptBackend):
                 "object-browser.icon-table": "fg:skyblue",
                 "object-browser.icon-view": "fg:salmon",
                 "object-browser.object-name": "fg:azure",
-                "shell.command-sigil": f"fg:#{colors[Token.Literal.String.Symbol]}",
-                "shell.command": f"fg:#{colors[Token.Keyword]}",
+                "shell.command": f"fg:#{colors[Token.Keyword]} bold",
+                "shell.command-args": f"fg:#{colors[Token.Text]} italic",
+                "shell.command-sigil": f"fg:#{colors[Token.Literal.String.Symbol]} bold",
             }
         )
 

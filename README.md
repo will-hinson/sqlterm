@@ -1,11 +1,11 @@
 <div align="center">
-    <img src="https://github.com/will-hinson/sqlterm/blob/dev/resources/banner.png?raw=true" />
+    <img src="https://github.com/will-hinson/sqlterm/blob/main/resources/banner.png?raw=true" />
     <em>A modern command-line client for SQL</em>
 </div>
 
 <br />
 
-![An example SQLTerm session](https://github.com/will-hinson/sqlterm/blob/wip/object-browser/resources/example-session3.png?raw=true)
+![An example SQLTerm session](https://github.com/will-hinson/sqlterm/blob/main/resources/example-session3.png?raw=true)
 
 ## Installation
 The latest release version of SQLTerm may be installed from [PyPI](https://pypi.org/project/sqlterm/) using `pip`:
