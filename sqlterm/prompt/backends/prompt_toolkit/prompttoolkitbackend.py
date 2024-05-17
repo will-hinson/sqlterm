@@ -43,7 +43,7 @@ from ...enums import PromptType
 from ...exceptions import UserExit
 from ....sql.generic.dataclasses import SqlObject, SqlStructure
 from ....sql.generic.enums.sqldialect import SqlDialect
-from ....sql.exceptions import DisconnectedException
+from ....sql.exceptions import DialectException, DisconnectedException
 from .sqltermlexer import SqlTermLexer
 
 
@@ -312,8 +312,11 @@ class PromptToolkitBackend(PromptBackend):
                             for sql_object in object_browser_result.hierarchy
                         )
                     )
-            except DisconnectedException:
+            except (DisconnectedException, DialectException):
                 ...
+            # pylint: disable=broad-exception-caught
+            except Exception as exc:
+                self.display_exception(exc, unhandled=True)
 
         # NOTE: disable the default i-search
         @bindings.add(Keys.ControlS)
@@ -718,6 +721,13 @@ class PromptToolkitBackend(PromptBackend):
             print("\r", end="")
 
         self.show_cursor()
+
+        # check that the inspector actually got a structure
+        if self.__completer.inspector_structure is None:
+            raise DialectException(
+                "Inspector for current SQL connection was unable to derive the structure of "
+                "the database"
+            )
 
         return self._show_object_browser(self.__completer.inspector_structure)
 
