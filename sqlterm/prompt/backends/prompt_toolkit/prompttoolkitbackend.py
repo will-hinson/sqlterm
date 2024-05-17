@@ -484,6 +484,78 @@ class PromptToolkitBackend(PromptBackend):
                     else selection_end - len(prev_line) - 1
                 )
 
+        @bindings.add(Keys.ShiftLeft)
+        def binding_shift_left(event: KeyPressEvent) -> None:
+            buffer = event.app.current_buffer
+
+            # check that we're not at the beginning of the buffer already
+            if buffer.document.cursor_position == 0:
+                return
+
+            # start a selection if there isn't one
+            if buffer.selection_state is None:
+                # if the buffer isn't at the end of the line, move right so that
+                # the selection will start with the current character. this makes
+                # it so that when we're at the end of the line, the first selected
+                # character will be the prior character
+                if not buffer.document.is_cursor_at_the_end:
+                    buffer.cursor_right()
+
+                buffer.start_selection()
+
+                # enter shift mode so that other shift+arrow combinations will work properly
+                if buffer.selection_state is not None:
+                    buffer.selection_state.enter_shift_mode()
+
+            # if the cursor is already at the beginning of the current line. if so,
+            # we move it up to the previous line and select the EOL character
+            elif (
+                buffer.document.cursor_position_col == 0
+                and buffer.document.cursor_position_row > 0
+            ):
+                buffer.cursor_up()
+                buffer.cursor_position += buffer.document.get_end_of_line_position()
+                buffer.cursor_position += buffer.document.get_cursor_right_position(
+                    count=1
+                )
+                return
+
+            # move the cursor one to the left to select the previous character. we want to
+            # do this when we started a selection or when there's an active selection that
+            # is not at the start of its line
+            event.app.current_buffer.cursor_left()
+
+        @bindings.add(Keys.ShiftRight)
+        def binding_shift_right(event: KeyPressEvent) -> None:
+            buffer = event.app.current_buffer
+
+            # check that we're not at the end of the buffer already
+            if buffer.document.is_cursor_at_the_end:
+                return
+
+            # start a selection if there isn't one
+            if buffer.selection_state is None:
+                buffer.start_selection()
+
+                # enter shift mode so that other shift+arrow combinations will work properly
+                if buffer.selection_state is not None:
+                    buffer.selection_state.enter_shift_mode()
+
+            # if the cursor is already at the end of the current line. if so,
+            # we move it down to the next line and select the first character
+            elif (
+                buffer.document.cursor_position_col == len(buffer.document.current_line)
+                and buffer.document.cursor_position_row < buffer.document.line_count
+            ):
+                buffer.cursor_down()
+                buffer.cursor_left(count=buffer.document.cursor_position_col)
+                return
+
+            # move the cursor one to the right to select the bext character. we want to
+            # do this when we started a selection or when there's an active selection that
+            # is not at the end of its line
+            event.app.current_buffer.cursor_right()
+
         @bindings.add(Keys.Tab)
         def binding_tab(event: KeyPressEvent) -> None:
             # check if there is a multiline selection and indent all lines if so
