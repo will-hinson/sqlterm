@@ -100,6 +100,7 @@ class PromptToolkitBackend(PromptBackend):
     __dialect_escape_chars: Dict[SqlDialect, str] = {
         SqlDialect.GENERIC: '"',
         SqlDialect.MYSQL: "`",
+        SqlDialect.ORACLE: '"',
         SqlDialect.POSTGRES: '"',
         SqlDialect.SQLITE: '"',
         SqlDialect.TSQL: '"',
