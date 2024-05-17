@@ -323,6 +323,14 @@ class PromptToolkitBackend(PromptBackend):
         @bindings.add(Keys.ControlS)
         def binding_ctrl_s(_: KeyPressEvent) -> None: ...
 
+        @bindings.add(Keys.ControlY, save_before=lambda _: False)
+        def binding_ctrl_y(event: KeyPressEvent) -> None:
+            event.current_buffer.redo()
+
+        @bindings.add(Keys.ControlZ, save_before=lambda _: False)
+        def binding_ctrl_z(event: KeyPressEvent) -> None:
+            event.current_buffer.undo()
+
         @bindings.add(Keys.Enter)
         def binding_enter(event: KeyPressEvent) -> None:
             # check for a blank line or a shell or sqlterm command (also, show help if the user enters 'help')
