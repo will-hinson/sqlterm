@@ -4,6 +4,7 @@ import time
 import traceback
 from typing import Any, Callable, Dict, Iterable, List, Tuple
 
+import os
 from prompt_toolkit import (
     print_formatted_text,
     prompt,
@@ -22,6 +23,7 @@ from prompt_toolkit.layout.containers import HSplit, VSplit, Window, WindowAlign
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.processors import Processor, TabsProcessor
+from prompt_toolkit.output.color_depth import ColorDepth
 from prompt_toolkit.styles import (
     BaseStyle,
     merge_styles,
@@ -133,6 +135,7 @@ class PromptToolkitBackend(PromptBackend):
             ),
             completer=self.__completer,
             cursor=SelectionCursorShapeConfig(),
+            color_depth=self._default_color_depth,
             **kwargs,
         )
         self.__current_statement_index = 0
@@ -143,6 +146,27 @@ class PromptToolkitBackend(PromptBackend):
 
     def clear_completions(self: "PromptToolkitBackend") -> None:
         self.__completer.clear_completions()
+
+    @property
+    def _default_color_depth(self: "PromptToolkitBackend") -> ColorDepth:
+        # use 24-bit color on windows
+        if os.name == "nt":
+            return ColorDepth.DEPTH_24_BIT
+
+        # on linux/unix, check if the COLORTERM variable is set
+        if "COLORTERM" in os.environ:
+            match os.environ["COLORTERM"]:
+                case "truecolor":
+                    return ColorDepth.TRUE_COLOR
+                case "24bit":
+                    return ColorDepth.DEPTH_24_BIT
+
+        # check for linux tty mode
+        if "TERM" in os.environ and os.environ["TERM"] == "linux":
+            return ColorDepth.DEPTH_4_BIT
+
+        # if no conditions were met, use whatever the default color depth is
+        return ColorDepth.default()
 
     @property
     def _default_input_processors(self: "PromptToolkitBackend") -> List[Processor]:
