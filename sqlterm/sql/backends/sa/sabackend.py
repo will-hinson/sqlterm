@@ -192,7 +192,7 @@ class SaBackend(SqlBackend):
         if url.host is None:
             connection_detail = url.render_as_string(hide_password=True)
         else:
-            if url.database is None:
+            if url.database is None or url.database == "":
                 connection_detail = (
                     "" if url.username is None else f"{url.username}@"
                 ) + url.host

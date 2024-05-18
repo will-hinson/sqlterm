@@ -11,6 +11,7 @@ from ..prompt_models import MsSqlPromptModel, SqlitePromptModel
 class SaDialect(StrEnum):
     MSSQL = "mssql"
     MYSQL = "mysql"
+    ORACLE = "oracle"
     POSTGRES = "postgresql"
     SQLITE = "sqlite"
 
@@ -18,6 +19,7 @@ class SaDialect(StrEnum):
 generic_dialect_map: Dict[SaDialect, SqlDialect] = {
     SaDialect.MSSQL: SqlDialect.TSQL,
     SaDialect.MYSQL: SqlDialect.MYSQL,
+    SaDialect.ORACLE: SqlDialect.ORACLE,
     SaDialect.POSTGRES: SqlDialect.POSTGRES,
     SaDialect.SQLITE: SqlDialect.SQLITE,
 }
