@@ -81,12 +81,13 @@ class SaSpoolMonitor(Thread):
         print(" " * (shutil.get_terminal_size().columns - 1), end="")
         print("\r", end="")
 
+        self.parent.parent.context.backends.prompt.show_cursor()
+
     @property
     def spool(self: "SaSpoolMonitor") -> List[Tuple]:
         return self.__spool
 
     def stop(self: "SaSpoolMonitor") -> None:
-        self.parent.parent.context.backends.prompt.show_cursor()
         self.__stopped = True
 
 

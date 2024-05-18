@@ -119,7 +119,10 @@ class SqlTerm:
         except SqlException as sqe:
             self.context.backends.prompt.display_exception(sqe)
         except KeyboardInterrupt:
-            self.context.backends.prompt.display_info(" KeyboardInterrupt")
+            try:
+                self.context.backends.prompt.display_info(" KeyboardInterrupt")
+            except KeyboardInterrupt:
+                ...
         except Exception as exc:
             self.context.backends.prompt.display_exception(exc, unhandled=True)
 
@@ -144,7 +147,10 @@ class SqlTerm:
 
             # execute the command if it wasn't empty
             if len(user_command.strip()) != 0:
-                self.handle_command(user_command)
+                try:
+                    self.handle_command(user_command)
+                except KeyboardInterrupt:
+                    ...
 
     def remove_alias(self: "SqlTerm", alias_name: str) -> None:
         if alias_name not in self.context.config.aliases:
