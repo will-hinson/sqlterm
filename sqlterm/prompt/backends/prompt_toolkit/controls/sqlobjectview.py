@@ -1,6 +1,5 @@
 from typing import Dict, List, Tuple
 
-from prompt_toolkit.filters import has_focus
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.layout import Layout, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
@@ -20,7 +19,9 @@ _sql_object_type_characters: Dict[SqlObjectType, str] = {
     SqlObjectType.PARAMETER: "⚙ ",
     SqlObjectType.PROCEDURE: "🕮 ",
     SqlObjectType.SCHEMA: "🗀 ",
+    SqlObjectType.SYNONYM: "⊡ ",
     SqlObjectType.TABLE: "▦ ",
+    SqlObjectType.TYPE: "🆃 ",
     SqlObjectType.VIEW: "👁 ",
 }
 
@@ -34,7 +35,9 @@ _sql_object_type_format_classes: Dict[SqlObjectType, str] = {
     SqlObjectType.PARAMETER: "class:object-browser.icon-parameter",
     SqlObjectType.PROCEDURE: "class:object-browser.icon-procedure",
     SqlObjectType.SCHEMA: "class:object-browser.icon-schema",
+    SqlObjectType.SYNONYM: "class:object-browser.icon-synonym",
     SqlObjectType.TABLE: "class:object-browser.icon-table",
+    SqlObjectType.TYPE: "class:object-browser.icon-type",
     SqlObjectType.VIEW: "class:object-browser.icon-view",
 }
 

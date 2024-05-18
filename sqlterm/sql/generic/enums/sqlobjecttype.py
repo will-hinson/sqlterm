@@ -17,4 +17,5 @@ class SqlObjectType(StrEnum):
     SCHEMA = auto()
     SYNONYM = auto()
     TABLE = auto()
+    TYPE = auto()
     VIEW = auto()
