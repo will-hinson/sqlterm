@@ -103,7 +103,14 @@ class DefaultCompleter(Completer):
             )
             for sql_object in self.inspector_structure_flattened
             if word_before_cursor.upper() in sql_object.name.upper()
-            and sql_object.type not in {SqlObjectType.COLUMN, SqlObjectType.PARAMETER}
+            and (
+                sql_object.type
+                not in {
+                    SqlObjectType.COLUMN,
+                    SqlObjectType.INDEX,
+                    SqlObjectType.PARAMETER,
+                }
+            )
         ]
 
     def _get_completions_ansi_sql(

@@ -256,10 +256,22 @@ class MsSqlInspector(SqlInspector):
                 """.replace(
                 "?", database_name.replace('"', '""')
             ): SqlObjectType.COLUMN,
+            """
+                SELECT DISTINCT
+                    [object_id],
+                    [name]
+                FROM
+                    "?".sys.indexes;
+                """.replace(
+                "?", database_name.replace('"', '""')
+            ): SqlObjectType.INDEX,
         }.items():
             for object_id, name in connection.execute(
                 self.parent.make_query(query_str).sa_text
             ):
+                if name is None:
+                    continue
+
                 if object_id not in children:
                     children[object_id] = set()
 

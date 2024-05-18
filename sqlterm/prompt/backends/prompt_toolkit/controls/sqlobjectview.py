@@ -11,11 +11,12 @@ from .....sql.generic.enums import SqlObjectType
 
 _sql_object_type_characters: Dict[SqlObjectType, str] = {
     SqlObjectType.CATALOG: "⛁ ",
-    SqlObjectType.COLUMN: "🗅 ",
+    SqlObjectType.COLUMN: "⎙ ",
     SqlObjectType.DATABASE: "⛁ ",
     SqlObjectType.FUNCTION: "ƒ ",
     SqlObjectType.FUNCTION_SCALAR: "ƒ𝑥",
     SqlObjectType.FUNCTION_TABLE_VALUED: "🗠 ",
+    SqlObjectType.INDEX: "🗇 ",
     SqlObjectType.PARAMETER: "⚙ ",
     SqlObjectType.PROCEDURE: "🕮 ",
     SqlObjectType.SCHEMA: "🗀 ",
@@ -32,6 +33,7 @@ _sql_object_type_format_classes: Dict[SqlObjectType, str] = {
     SqlObjectType.FUNCTION: "class:object-browser.icon-function-scalar",
     SqlObjectType.FUNCTION_SCALAR: "class:object-browser.icon-function-scalar",
     SqlObjectType.FUNCTION_TABLE_VALUED: "class:object-browser.icon-function-table-valued",
+    SqlObjectType.INDEX: "class:object-browser.icon-index",
     SqlObjectType.PARAMETER: "class:object-browser.icon-parameter",
     SqlObjectType.PROCEDURE: "class:object-browser.icon-procedure",
     SqlObjectType.SCHEMA: "class:object-browser.icon-schema",
