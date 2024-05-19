@@ -37,9 +37,9 @@ class CommandHelp(sqltermcommand.SqlTermCommand):
         if self.args.command_name is None:
             for command_name in sorted(
                 command_name
-                for command_name in sqltermcommand._available_commands
+                for command_name in sqltermcommand.available_commands
                 # exclude known command aliases
-                if command_name not in sqltermcommand._command_aliases
+                if command_name not in sqltermcommand.command_aliases
             ):
                 self._show_help_for_command(command_name)
                 self.parent.context.backends.prompt.display_info("")
@@ -51,7 +51,7 @@ class CommandHelp(sqltermcommand.SqlTermCommand):
 
     def _show_help_for_command(self: "CommandHelp", command_name: str) -> None:
         # pylint: disable=protected-access
-        if command_name not in sqltermcommand._available_commands:
+        if command_name not in sqltermcommand.available_commands:
             raise NotImplementedError(
                 f"Unable to show help for command '{command_name}'"
             )
@@ -59,7 +59,7 @@ class CommandHelp(sqltermcommand.SqlTermCommand):
         # get the arg parser from the command using the argument_parser property.
         # technically, the argument_parser property needs to be bound to an
         # instance, but here we call it without being bound
-        command_arg_parser: ArgumentParser = sqltermcommand._available_commands[
+        command_arg_parser: ArgumentParser = sqltermcommand.available_commands[
             command_name
         ].argument_parser.fget(
             None

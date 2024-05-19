@@ -4,6 +4,8 @@ from datetime import datetime
 
 @dataclass
 class JobStatusRecord:
+    # pylint: disable=too-many-instance-attributes
+
     job_id: str
     name: str
     description: str

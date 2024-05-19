@@ -119,3 +119,6 @@ class CommandEdit(sqltermcommand.SqlTermCommand):
 
             except SqlQueryException:
                 ...
+
+        # if we failed to find the source for the object, return None
+        return None

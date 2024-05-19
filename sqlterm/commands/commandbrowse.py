@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-import sys
 
 from . import sqltermcommand
 from .. import constants
