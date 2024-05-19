@@ -57,6 +57,8 @@ class SqliteManager(QueryManager):
         )
 
     def _init_cursor(self: "SqliteManager") -> None:
+        # pylint: disable=protected-access
+
         # initialize the cursor
         try:
             self.__cursor = self.connection._dbapi_connection.cursor().execute(

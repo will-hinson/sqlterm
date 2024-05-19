@@ -69,4 +69,5 @@ class PromptBackend(metaclass=ABCMeta):
     def show_cursor(self: "PromptBackend") -> None: ...
 
 
+# pylint: disable=wrong-import-position
 from ... import sqlterm

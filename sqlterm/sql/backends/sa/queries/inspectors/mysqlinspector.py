@@ -1,4 +1,4 @@
-from typing import Dict, Set, Tuple
+from typing import Dict, Set
 
 from pygments.lexers.sql import MySqlLexer
 from pygments.token import Token

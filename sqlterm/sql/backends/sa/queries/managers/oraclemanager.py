@@ -34,6 +34,8 @@ class OracleManager(QueryManager):
         return [] if self.__columns is None else self.__columns
 
     def _display_dbms_output(self: "OracleManager") -> None:
+        # pylint: disable=protected-access
+
         # get and display all dbms_output per the oracle sample
         #
         # https://github.com/oracle/python-oracledb/blob/main/samples/dbms_output.py

@@ -9,7 +9,7 @@ from sqlterm import __version__
 def _get_fallback_shell():
     if os.name == "posix":
         return os.environ["SHELL"]
-    elif os.name == "nt":
+    if os.name == "nt":
         return os.environ["COMSPEC"]
 
     raise NotImplementedError(f"OS {os.name!r} support not available")

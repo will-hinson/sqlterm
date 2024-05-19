@@ -4,7 +4,7 @@ from typing import Type
 
 from . import constants
 from .commands import SqlTermCommand
-from .commands.exceptions import AliasExistsException, HelpShown
+from .commands.exceptions import AliasExistsException, HelpShown, NoAliasExistsException
 from .config import Alias, SqlTermConfig
 from .context import BackendSet, SqlTermContext
 from .prompt.abstract import PromptBackend

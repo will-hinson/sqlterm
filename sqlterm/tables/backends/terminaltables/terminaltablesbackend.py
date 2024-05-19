@@ -7,6 +7,8 @@ from ....sql.generic.recordset import RecordSet
 
 
 class TerminalTablesBackend(TableBackend):
+    # pylint: disable=too-few-public-methods
+
     def construct_table(self: "TerminalTablesBackend", record_set: RecordSet) -> str:
         table: SingleTable = SingleTable(
             [tuple([""] + record_set.columns)]

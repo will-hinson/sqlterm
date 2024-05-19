@@ -71,6 +71,7 @@ class SqlTermConfig:
                 return SqlTermConfig.from_dict(json.loads(config_file.read()))
         except Exception as exc:
             print(f"Unable to read config from target path '{path}': {exc}")
+            return None
 
     @staticmethod
     def make_default() -> "SqlTermConfig":
@@ -80,6 +81,7 @@ class SqlTermConfig:
 
     def to_file(self: "SqlTermConfig", output_path: str) -> None:
         with open(output_path, "w", encoding="utf-8") as output_file:
+            # pylint: disable=no-member
             print(self.to_json(indent=2), file=output_file)
 
 

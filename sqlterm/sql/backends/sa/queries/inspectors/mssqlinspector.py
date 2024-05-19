@@ -307,7 +307,6 @@ class MsSqlInspector(SqlInspector):
 
     def _get_children_for(
         self: "MsSqlInspector",
-        sql_object: SqlObject,
         database_name: str,
         object_id: int,
         connection: Connection,
@@ -400,7 +399,6 @@ class MsSqlInspector(SqlInspector):
                 children=set(),
             )
             sql_object.children = self._get_children_for(
-                sql_object,
                 database_name=database_name,
                 object_id=object_id,
                 connection=connection,

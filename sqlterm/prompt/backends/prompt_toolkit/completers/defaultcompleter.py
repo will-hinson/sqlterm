@@ -90,7 +90,7 @@ class DefaultCompleter(Completer):
         if self.inspector_structure_flattened is None:
             return []
 
-        # TODO: perform contextual completions here
+        # NOTE: we should eventually perform contextual completions here
         return [
             Completion(
                 sql_object.name,

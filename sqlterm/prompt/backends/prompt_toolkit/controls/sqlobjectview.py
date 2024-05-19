@@ -80,6 +80,7 @@ class SqlObjectView(Window):
         # collapse all children of this object
         self.__children.reverse()
         for child in self.__children:
+            # pylint: disable=protected-access
             child._collapse()
 
         # remove the children from the parent HSplit

@@ -55,4 +55,5 @@ class DefaultManager(QueryManager):
         if record is None:
             raise RecordSetEnd("Reached the end of the record set")
 
+        # pylint: disable=protected-access
         return record._tuple()

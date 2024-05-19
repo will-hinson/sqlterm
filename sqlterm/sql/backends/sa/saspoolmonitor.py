@@ -22,12 +22,12 @@ def _human_readable_duration(seconds: float) -> str:
 
     if seconds < 60:
         return f"{math.floor(seconds * 10) / 10}s"
-    elif seconds < day_length:
+    if seconds < day_length:
         return _human_readable_duration_hms(seconds)
-    else:
-        return f"{int(seconds // day_length)} days " + _human_readable_duration_hms(
-            seconds % day_length
-        )
+
+    return f"{int(seconds // day_length)} days " + _human_readable_duration_hms(
+        seconds % day_length
+    )
 
 
 class SaSpoolMonitor(Thread):
@@ -91,4 +91,5 @@ class SaSpoolMonitor(Thread):
         self.__stopped = True
 
 
+# pylint: disable=wrong-import-position
 from . import sabackend

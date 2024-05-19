@@ -174,6 +174,11 @@ class PromptToolkitBackend(PromptBackend):
 
     @property
     def _default_key_bindings(self: "PromptToolkitBackend") -> KeyBindings:
+        # NOTE: disabling because we define binding callbacks here and pylint
+        # is unhappy about the number of variables we have to define
+        #
+        # pylint: disable=too-many-locals,too-many-statements
+
         bindings: KeyBindings = KeyBindings()
 
         def insert_newline(buffer: Buffer) -> None:
@@ -357,7 +362,8 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add(Keys.Enter)
         def binding_enter(event: KeyPressEvent) -> None:
-            # check for a blank line or a shell or sqlterm command (also, show help if the user enters 'help')
+            # check for a blank line or a shell or sqlterm command (also, show
+            # help if the user enters 'help')
             current_text_stripped: str = event.current_buffer.text.strip()
             if len(current_text_stripped) == 0 or current_text_stripped[:1] in (
                 constants.PREFIX_SHELL_COMMAND,
@@ -365,7 +371,8 @@ class PromptToolkitBackend(PromptBackend):
             ):
                 event.current_buffer.validate_and_handle()
                 return
-            elif current_text_stripped.lower() == "help":
+
+            if current_text_stripped.lower() == "help":
                 event.current_buffer.text = "%help"
                 event.current_buffer.validate_and_handle()
                 return
@@ -989,6 +996,8 @@ class PromptToolkitBackend(PromptBackend):
         def _yes_no_validator(user_input: str) -> str | None:
             if user_input.lower().strip() not in self._yes_no_values:
                 return "Error: Please enter 'yes' or 'no'"
+
+            return None
 
         return self._yes_no_values[
             self._prompt_for_str(

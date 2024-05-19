@@ -30,6 +30,10 @@ _command_jobs_start_parser = _sub_parsers.add_parser(
 )
 _command_jobs_start_parser.add_argument("job_name")
 
+_command_jobs_status_parser = _sub_parsers.add_parser(
+    "status", help="Alias for the '%jobs list' subcommand"
+)
+
 _command_jobs_stop_parser = _sub_parsers.add_parser(
     "stop", help="Stops a SQL job with the provided name"
 )
@@ -201,7 +205,7 @@ class CommandJobs(sqltermcommand.SqlTermCommand):
 
         # determine which subcommand to perform
         match self.args.subcommand:
-            case "list":
+            case "list" | "status":
                 self._job_list(query_set)
             case "start":
                 self._job_start(query_set)

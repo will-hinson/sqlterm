@@ -6,6 +6,8 @@ from ....sql.generic.recordset import RecordSet
 
 
 class CsvBackend(TableBackend):
+    # pylint: disable=too-few-public-methods
+
     def construct_table(self: "CsvBackend", record_set: RecordSet) -> str:
         output: io.StringIO = io.StringIO()
         writer = csv.writer(output)

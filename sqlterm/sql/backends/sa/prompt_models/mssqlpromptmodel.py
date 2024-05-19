@@ -1,13 +1,16 @@
-import pyodbc
 import re
 import string
 from typing import List
 
+import pyodbc
 from sqlalchemy.engine import URL
 
 from ..dataclasses import ConnectionPromptModel
 from .....prompt.dataclasses import InputModel, Suggestion
 from .....prompt.enums import PromptType
+
+# NOTE: disabling this as pylint is unhappy about pyodbc
+# pylint: disable=c-extension-no-member
 
 
 class MsSqlPromptModel(ConnectionPromptModel):
@@ -31,6 +34,8 @@ class MsSqlPromptModel(ConnectionPromptModel):
             if user_input not in pyodbc.drivers():
                 return "Error: ODBC driver with specified name not found"
 
+        return None
+
     @staticmethod
     def host_validator(user_input: str) -> str | None:
         user_input = user_input.strip()
@@ -50,6 +55,8 @@ class MsSqlPromptModel(ConnectionPromptModel):
         if not all(allowed.match(x) for x in user_input.split(".")):
             return "Error: Provided host name is invalid"
 
+        return None
+
     @staticmethod
     def port_validator(user_input: str) -> str | None:
         user_input = user_input.strip()
@@ -60,6 +67,8 @@ class MsSqlPromptModel(ConnectionPromptModel):
                 int(user_input)
             except ValueError:
                 return "Error: Port number must be an integer between 0 and 65535"
+
+        return None
 
     @staticmethod
     def username_validator(user_input: str) -> str | None:
