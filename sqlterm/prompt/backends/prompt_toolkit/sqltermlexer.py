@@ -1,6 +1,5 @@
 import functools
 import os
-import shlex
 from typing import Callable, Dict, List
 
 from prompt_toolkit.document import Document

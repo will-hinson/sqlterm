@@ -79,9 +79,8 @@ class MySqlManager(QueryManager):
         # check if this record set actually returns records
         if self.__cursor.description is None:
             raise ReturnsNoRecords("The current result set returns no records")
-        else:
-            self._populate_columns()
 
+        self._populate_columns()
         return True
 
     def _populate_columns(self: "MsSqlManager") -> None:

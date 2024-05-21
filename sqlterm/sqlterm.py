@@ -1,10 +1,10 @@
 import argparse
 import os
-from typing import NoReturn, Type
+from typing import Type
 
 from . import constants
 from .commands import SqlTermCommand
-from .commands.exceptions import AliasExistsException, HelpShown
+from .commands.exceptions import AliasExistsException, HelpShown, NoAliasExistsException
 from .config import Alias, SqlTermConfig
 from .context import BackendSet, SqlTermContext
 from .prompt.abstract import PromptBackend
@@ -119,7 +119,11 @@ class SqlTerm:
         except SqlException as sqe:
             self.context.backends.prompt.display_exception(sqe)
         except KeyboardInterrupt:
-            self.context.backends.prompt.display_info(" KeyboardInterrupt")
+            try:
+                self.context.backends.prompt.display_info(" KeyboardInterrupt")
+            except KeyboardInterrupt:
+                ...
+        # pylint: disable=broad-exception-caught
         except Exception as exc:
             self.context.backends.prompt.display_exception(exc, unhandled=True)
 
@@ -129,7 +133,7 @@ class SqlTerm:
     def print_message_sql(self: "SqlTerm", message: str) -> None:
         self.context.backends.prompt.display_message_sql(message)
 
-    def repl(self: "SqlTerm") -> NoReturn:
+    def repl(self: "SqlTerm") -> None:
         user_exited: bool = False
 
         while not user_exited:
@@ -144,7 +148,10 @@ class SqlTerm:
 
             # execute the command if it wasn't empty
             if len(user_command.strip()) != 0:
-                self.handle_command(user_command)
+                try:
+                    self.handle_command(user_command)
+                except KeyboardInterrupt:
+                    ...
 
     def remove_alias(self: "SqlTerm", alias_name: str) -> None:
         if alias_name not in self.context.config.aliases:

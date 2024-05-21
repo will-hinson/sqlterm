@@ -1,3 +1,10 @@
+"""
+module sqlterm.commands.commandexit
+
+Contains all definitions for the CommandExit class which handles
+execution when the user types '%exit ...' at the command line
+"""
+
 from argparse import ArgumentParser
 import sys
 
@@ -14,6 +21,12 @@ _command_exit_arg_parser: ArgumentParser = ArgumentParser(
 
 
 class CommandExit(sqltermcommand.SqlTermCommand):
+    """
+    class CommandExit
+
+    Class that handles execution when the user types '%exit ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandExit") -> ArgumentParser:
         return _command_exit_arg_parser

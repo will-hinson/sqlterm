@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 import pyodbc
 from sqlalchemy import Connection
@@ -12,6 +12,9 @@ from .....exceptions import (
 )
 from .querymanager import QueryManager
 from ...saquery import SaQuery
+
+# NOTE: disabling this as pylint is unhappy about pyodbc
+# pylint: disable=c-extension-no-member
 
 
 class _MsSqlErrorNumbers(IntEnum):
@@ -158,9 +161,8 @@ class MsSqlManager(QueryManager):
         # check if this record set actually returns records
         if self.__cursor.description is None:
             raise ReturnsNoRecords("The current result set returns no records")
-        else:
-            self._populate_columns()
 
+        self._populate_columns()
         return True
 
     def _populate_columns(self: "MsSqlManager") -> None:

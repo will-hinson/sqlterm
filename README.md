@@ -41,9 +41,6 @@ The following SQL dialect and driver combinations are fully supported by SQLTerm
 | PostgreSQL           | `psycopg2`       | `postgresql+psycopg2://`  |
 | MySQL                | `mysqlconnector` | `mysql+mysqlconnector://` |
 | SQLite               | `sqlite`         | `sqlite://`               |
+| Oracle SQL           | `oracledb`       | `oracle+oracledb://`      |
 
-SQLTerm is integrated with [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy) and any of [its supported dialects](https://docs.sqlalchemy.org/en/20/dialects/) should be supported in theory. However, queries will be limited to a single result set and autocompletion support will be limited to objects in the `INFORMATION_SCHEMA`. The following SQL dialects have been tested to work with SQLTerm with limited support:
-
-| Dialect         | Driver            | Connection Schema    | Query Support | Autocomplete Support                     |
-| --------------- | ----------------- | -------------------- | ------------- | ---------------------------------------- |
-| Oracle Database | `python-oracledb` | `oracle+oracledb://` | Yes           | None due to lack of `INFORMATION_SCHEMA` |
+SQLTerm is integrated with [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy) and any of [its supported dialects](https://docs.sqlalchemy.org/en/20/dialects/) should be supported in theory. However, queries will be limited to a single result set and autocompletion support will be limited to objects in the `INFORMATION_SCHEMA`. 

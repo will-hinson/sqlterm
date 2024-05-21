@@ -1,5 +1,11 @@
+"""
+module sqlterm.commands.commandbrowse
+
+Contains all definitions for the CommandBrowse class which handles
+execution when the user types '%browse ...' at the command line
+"""
+
 from argparse import ArgumentParser
-import sys
 
 from . import sqltermcommand
 from .. import constants
@@ -14,6 +20,12 @@ _command_browse_arg_parser: ArgumentParser = ArgumentParser(
 
 
 class CommandBrowse(sqltermcommand.SqlTermCommand):
+    """
+    class CommandBrowse
+
+    Class that handles execution when the user types '%browse ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandBrowse") -> ArgumentParser:
         return _command_browse_arg_parser

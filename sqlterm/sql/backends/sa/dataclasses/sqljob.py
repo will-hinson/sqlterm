@@ -4,6 +4,8 @@ from datetime import datetime
 
 @dataclass
 class SqlJob:
+    # pylint: disable=too-many-instance-attributes
+
     id: str
     name: str
     description: str

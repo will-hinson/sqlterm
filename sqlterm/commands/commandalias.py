@@ -1,3 +1,10 @@
+"""
+module sqlterm.commands.commandalias
+
+Contains all definitions for the CommandAlias class which handles
+execution when the user types '%alias ...' at the command line
+"""
+
 from argparse import ArgumentParser
 
 from .exceptions import AliasExistsException, NoAliasExistsException
@@ -35,6 +42,12 @@ _command_alias_remove_parser.add_argument("alias_name", type=str)
 
 
 class CommandAlias(sqltermcommand.SqlTermCommand):
+    """
+    class CommandAlias
+
+    Class that handles execution when the user types '%alias ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandAlias") -> ArgumentParser:
         return _command_alias_arg_parser

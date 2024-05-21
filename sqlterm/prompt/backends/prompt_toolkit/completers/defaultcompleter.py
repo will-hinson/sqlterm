@@ -6,7 +6,7 @@ from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 
 from ..... import constants
-from .....commands.sqltermcommand import _available_commands
+from .....commands.sqltermcommand import available_commands
 from .....sql.generic.dataclasses import SqlStructure, SqlObject
 from .....sql.generic.enums import SqlObjectType
 
@@ -90,7 +90,7 @@ class DefaultCompleter(Completer):
         if self.inspector_structure_flattened is None:
             return []
 
-        # TODO: perform contextual completions here
+        # NOTE: we should eventually perform contextual completions here
         return [
             Completion(
                 sql_object.name,
@@ -103,7 +103,14 @@ class DefaultCompleter(Completer):
             )
             for sql_object in self.inspector_structure_flattened
             if word_before_cursor.upper() in sql_object.name.upper()
-            and sql_object.type not in {SqlObjectType.COLUMN, SqlObjectType.PARAMETER}
+            and (
+                sql_object.type
+                not in {
+                    SqlObjectType.COLUMN,
+                    SqlObjectType.INDEX,
+                    SqlObjectType.PARAMETER,
+                }
+            )
         ]
 
     def _get_completions_ansi_sql(
@@ -139,7 +146,7 @@ class DefaultCompleter(Completer):
             Completion(
                 command, start_position=-len(word_before_cursor), display_meta="command"
             )
-            for command in _available_commands
+            for command in available_commands
             if command.upper().startswith(word_before_cursor)
         ]
 

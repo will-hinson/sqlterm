@@ -1,3 +1,10 @@
+"""
+module sqlterm.commands.commandinstall
+
+Contains all definitions for the CommandInstall class which handles
+execution when the user types '%install ...' at the command line
+"""
+
 from argparse import ArgumentParser
 import subprocess
 import sys
@@ -24,6 +31,12 @@ _command_install_arg_parser.add_argument(
 
 
 class CommandInstall(sqltermcommand.SqlTermCommand):
+    """
+    class CommandInstall
+
+    Class that handles execution when the user types '%install ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandInstall") -> ArgumentParser:
         return _command_install_arg_parser

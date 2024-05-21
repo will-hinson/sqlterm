@@ -10,6 +10,7 @@ class SqlObjectType(StrEnum):
     FUNCTION = auto()
     FUNCTION_TABLE_VALUED = auto()
     FUNCTION_SCALAR = auto()
+    INDEX = auto()
     KEYWORD = auto()
     PARAMETER = auto()
     PRAGMA = auto()

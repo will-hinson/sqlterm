@@ -5,6 +5,8 @@ from ....sql.generic.recordset import RecordSet
 
 
 class TabulateBackend(TableBackend):
+    # pylint: disable=too-few-public-methods
+
     def construct_table(self: "TabulateBackend", record_set: RecordSet) -> str:
         return tabulate(
             record_set.records,

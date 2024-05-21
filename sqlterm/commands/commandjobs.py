@@ -1,3 +1,10 @@
+"""
+module sqlterm.commands.commandjobs
+
+Contains all definitions for the CommandJobs class which handles
+execution when the user types '%jobs ...' at the command line
+"""
+
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
@@ -29,6 +36,10 @@ _command_jobs_start_parser = _sub_parsers.add_parser(
     "start", help="Starts a SQL job with the provided name"
 )
 _command_jobs_start_parser.add_argument("job_name")
+
+_command_jobs_status_parser = _sub_parsers.add_parser(
+    "status", help="Alias for the '%jobs list' subcommand"
+)
 
 _command_jobs_stop_parser = _sub_parsers.add_parser(
     "stop", help="Stops a SQL job with the provided name"
@@ -181,6 +192,12 @@ _queries_for_dialect: Dict[SqlDialect, _JobQuerySet] = {
 
 
 class CommandJobs(sqltermcommand.SqlTermCommand):
+    """
+    class CommandJobs
+
+    Class that handles execution when the user types '%jobs ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandJobs") -> ArgumentParser:
         return _command_jobs_arg_parser
@@ -201,7 +218,7 @@ class CommandJobs(sqltermcommand.SqlTermCommand):
 
         # determine which subcommand to perform
         match self.args.subcommand:
-            case "list":
+            case "list" | "status":
                 self._job_list(query_set)
             case "start":
                 self._job_start(query_set)

@@ -4,6 +4,7 @@ import time
 import traceback
 from typing import Any, Callable, Dict, Iterable, List, Tuple
 
+import os
 from prompt_toolkit import (
     print_formatted_text,
     prompt,
@@ -22,6 +23,7 @@ from prompt_toolkit.layout.containers import HSplit, VSplit, Window, WindowAlign
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.processors import Processor, TabsProcessor
+from prompt_toolkit.output.color_depth import ColorDepth
 from prompt_toolkit.styles import (
     BaseStyle,
     merge_styles,
@@ -133,6 +135,7 @@ class PromptToolkitBackend(PromptBackend):
             ),
             completer=self.__completer,
             cursor=SelectionCursorShapeConfig(),
+            color_depth=self._default_color_depth,
             **kwargs,
         )
         self.__current_statement_index = 0
@@ -145,11 +148,37 @@ class PromptToolkitBackend(PromptBackend):
         self.__completer.clear_completions()
 
     @property
+    def _default_color_depth(self: "PromptToolkitBackend") -> ColorDepth:
+        # use 24-bit color on windows
+        if os.name == "nt":
+            return ColorDepth.DEPTH_24_BIT
+
+        # on linux/unix, check if the COLORTERM variable is set
+        if "COLORTERM" in os.environ:
+            match os.environ["COLORTERM"]:
+                case "truecolor":
+                    return ColorDepth.TRUE_COLOR
+                case "24bit":
+                    return ColorDepth.DEPTH_24_BIT
+
+        # check for linux tty mode
+        if "TERM" in os.environ and os.environ["TERM"] == "linux":
+            return ColorDepth.DEPTH_4_BIT
+
+        # if no conditions were met, use whatever the default color depth is
+        return ColorDepth.default()
+
+    @property
     def _default_input_processors(self: "PromptToolkitBackend") -> List[Processor]:
         return [TabsProcessor()]
 
     @property
     def _default_key_bindings(self: "PromptToolkitBackend") -> KeyBindings:
+        # NOTE: disabling because we define binding callbacks here and pylint
+        # is unhappy about the number of variables we have to define
+        #
+        # pylint: disable=too-many-locals,too-many-statements
+
         bindings: KeyBindings = KeyBindings()
 
         def insert_newline(buffer: Buffer) -> None:
@@ -333,7 +362,8 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add(Keys.Enter)
         def binding_enter(event: KeyPressEvent) -> None:
-            # check for a blank line or a shell or sqlterm command (also, show help if the user enters 'help')
+            # check for a blank line or a shell or sqlterm command (also, show
+            # help if the user enters 'help')
             current_text_stripped: str = event.current_buffer.text.strip()
             if len(current_text_stripped) == 0 or current_text_stripped[:1] in (
                 constants.PREFIX_SHELL_COMMAND,
@@ -341,7 +371,8 @@ class PromptToolkitBackend(PromptBackend):
             ):
                 event.current_buffer.validate_and_handle()
                 return
-            elif current_text_stripped.lower() == "help":
+
+            if current_text_stripped.lower() == "help":
                 event.current_buffer.text = "%help"
                 event.current_buffer.validate_and_handle()
                 return
@@ -711,6 +742,7 @@ class PromptToolkitBackend(PromptBackend):
                 "object-browser.icon-database": "fg:cadetblue",
                 "object-browser.icon-function-scalar": "fg:springgreen",
                 "object-browser.icon-function-table-valued": "fg:palegreen",
+                "object-browser.icon-index": "fg:wheat",
                 "object-browser.icon-parameter": "fg:cornsilk",
                 "object-browser.icon-procedure": "fg:gold",
                 "object-browser.icon-schema": "fg:navajowhite",
@@ -846,11 +878,11 @@ class PromptToolkitBackend(PromptBackend):
                 ("class:bottom-toolbar.info", " "),
                 ("class:bottom-toolbar.text", f"({status_details.dialect})"),
             ]
-        else:
-            return [
-                ("class:bottom-toolbar.icon", "\u2a2f"),
-                ("class:bottom-toolbar.info", " Disconnected"),
-            ]
+
+        return [
+            ("class:bottom-toolbar.icon", "\u2a2f"),
+            ("class:bottom-toolbar.info", " Disconnected"),
+        ]
 
     def get_command(
         self: "PromptToolkitBackend", initial_input: str | None = None
@@ -964,6 +996,8 @@ class PromptToolkitBackend(PromptBackend):
         def _yes_no_validator(user_input: str) -> str | None:
             if user_input.lower().strip() not in self._yes_no_values:
                 return "Error: Please enter 'yes' or 'no'"
+
+            return None
 
         return self._yes_no_values[
             self._prompt_for_str(

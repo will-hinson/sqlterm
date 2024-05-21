@@ -235,6 +235,8 @@ class SaBackend(SqlBackend):
         self._init_inspector()
 
     def make_connection(self: "SaBackend") -> Connection:
+        # pylint: disable=protected-access
+
         # patch the _autobegin() method with one that doesn't start a transaction
         # and set up autocommit on the underlying connection object if we can
         def _no_autobegin(*_, **__) -> None: ...
@@ -318,6 +320,7 @@ class SaBackend(SqlBackend):
                 "row loading performance may be noticeably degraded"
             )
 
+        # pylint: disable=unidiomatic-typecheck
         if self.dialect is not None and type(self.__inspector) == DefaultInspector:
             warnings.warn(
                 f"SQL dialect {self.dialect} has no defined SqlInspector. "

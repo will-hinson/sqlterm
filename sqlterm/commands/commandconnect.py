@@ -1,3 +1,10 @@
+"""
+module sqlterm.commands.commandconnect
+
+Contains all definitions for the CommandConnect class which handles
+execution when the user types '%connect ...' at the command line
+"""
+
 from argparse import ArgumentParser
 
 from . import sqltermcommand
@@ -23,6 +30,12 @@ _command_connect_arg_parser.add_argument(
 
 
 class CommandConnect(sqltermcommand.SqlTermCommand):
+    """
+    class CommandConnect
+
+    Class that handles execution when the user types '%connect ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandConnect") -> ArgumentParser:
         return _command_connect_arg_parser
