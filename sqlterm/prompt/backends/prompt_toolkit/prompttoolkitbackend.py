@@ -878,11 +878,11 @@ class PromptToolkitBackend(PromptBackend):
                 ("class:bottom-toolbar.info", " "),
                 ("class:bottom-toolbar.text", f"({status_details.dialect})"),
             ]
-        else:
-            return [
-                ("class:bottom-toolbar.icon", "\u2a2f"),
-                ("class:bottom-toolbar.info", " Disconnected"),
-            ]
+
+        return [
+            ("class:bottom-toolbar.icon", "\u2a2f"),
+            ("class:bottom-toolbar.info", " Disconnected"),
+        ]
 
     def get_command(
         self: "PromptToolkitBackend", initial_input: str | None = None

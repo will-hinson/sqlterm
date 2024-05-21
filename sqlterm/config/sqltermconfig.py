@@ -1,7 +1,14 @@
+"""
+module sqlterm.config.sqltermconfig
+
+Contains the definition of the SqlTermConfig class, a dataclass that represents
+a set of sqlterm configurations
+"""
+
 from dataclasses import dataclass
 import json
 import os
-from typing import Any, Callable, Dict, List, Tuple, Type
+from typing import Any, Callable, Dict, List, Tuple, NoReturn, Type
 
 from dataclasses_json import dataclass_json
 import platformdirs
@@ -18,20 +25,54 @@ _config_upgrade_order: List[
 @dataclass_json
 @dataclass
 class SqlTermConfig:
+    """
+    class SqlTermConfig
+
+    Dataclass that represents a set of sqlterm configurations
+    """
+
     version: str
     aliases: Dict[str, Alias]
     color_scheme: str
 
     @staticmethod
-    def cannot_upgrade(
-        from_config: "SqlTermConfig", to_version: str
-    ) -> "SqlTermConfig":
+    def cannot_upgrade(from_config: "SqlTermConfig", to_version: str) -> NoReturn:
+        """
+        Constructs and throws an appropriate exception for when a configuration cannot
+        be upgraded to a specific version
+
+        Args:
+            from_config (SqlTermConfig): The configuration instance that was
+                being upgraded
+            to_version (str): The version that the configuration was being upgraded to
+
+        Returns:
+            Nothing
+
+        Raises:
+            NotImplementedError: An appropriate error based on the person the config was
+                being upgraded to
+        """
+
         raise NotImplementedError(
             f"Cannot upgrade config from version {from_config.version} to version {to_version}"
         )
 
     @staticmethod
     def default_path() -> str:
+        """
+        Returns the default path that the current user's configuration should be read from
+
+        Args:
+            None
+
+        Returns:
+            str: The path where the current user's configuration file should be
+
+        Raises:
+            Nothing
+        """
+
         return os.path.join(
             platformdirs.user_data_dir(
                 appname=constants.APPLICATION_NAME,
@@ -58,10 +99,41 @@ class SqlTermConfig:
     def from_dict(
         cls: Type["SqlTermConfig"], json_data: Dict[str, Any]
     ) -> "SqlTermConfig":
+        """
+        Constructs a SqlTermConfig instance from the provided json dict
+
+        Args:
+            json_data (Dict[str, Any]): The json data from which to construct the
+                SqlTermConfig
+
+        Returns:
+            SqlTermConfig: A SqlTermConfig instance containing the data from the
+                provided dict
+
+        Raises:
+            Exception: If the provided dict does not match the expected layout
+                of a SqlTermConfig instance
+        """
+
         return SqlTermConfig(**json_data)
 
     @classmethod
     def from_file(cls: Type["SqlTermConfig"], path: str) -> "SqlTermConfig | None":
+        """
+        Constructs a SqlTermConfig instance from the provided JSON file
+
+        Args:
+            path (str): The file to read JSON config data from
+
+        Returns:
+            SqlTermConfig: A SqlTermConfig instance containing the data from the
+                provided file
+
+        Raises:
+            Exception: If the provided file contents do not match the expected
+                layout of a SqlTermConfig instance
+        """
+
         # check if the config file exists and create it if not
         SqlTermConfig._ensure_file(path)
 
@@ -75,11 +147,38 @@ class SqlTermConfig:
 
     @staticmethod
     def make_default() -> "SqlTermConfig":
+        """
+        Constructs a SqlTermConfig instance containing the default configuration
+
+        Args:
+            None
+
+        Returns:
+            SqlTermConfig: Instance containing default settings
+
+        Raises:
+            Nothing
+        """
+
         return SqlTermConfig(
             version=constants.CONFIG_VERSION, aliases={}, color_scheme="dracula"
         )
 
     def to_file(self: "SqlTermConfig", output_path: str) -> None:
+        """
+        Writes this SqlTermConfig instance to the file with the specified path as
+        JSON data.
+
+        Args:
+            output_path (str): The path of the file to write the config to
+
+        Returns:
+            Nothing
+
+        Raises:
+            Exception: If the file was unable to be written to
+        """
+
         with open(output_path, "w", encoding="utf-8") as output_file:
             # pylint: disable=no-member
             print(self.to_json(indent=2), file=output_file)

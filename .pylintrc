@@ -433,11 +433,13 @@ disable=raw-checker-failed,
         suppressed-message,
         useless-suppression,
         deprecated-pragma,
-        use-symbolic-message-instead,
         use-implicit-booleaness-not-comparison-to-string,
         use-implicit-booleaness-not-comparison-to-zero,
         multiple-statements,
-        cyclic-import
+        cyclic-import,
+        # duplicate-code is caused by the fact that we have to define multiple
+        # sets of SQL keywords for different dialects
+        duplicate-code
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

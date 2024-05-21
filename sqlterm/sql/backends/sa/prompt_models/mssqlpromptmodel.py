@@ -83,6 +83,8 @@ class MsSqlPromptModel(ConnectionPromptModel):
             if char not in MsSqlPromptModel._username_valid_chars:
                 return f"Error: Character '{char}' is not allowed in user name"
 
+        return None
+
     @staticmethod
     def construct_url(user_input: List[str]) -> URL:
         # get everything from the user's input

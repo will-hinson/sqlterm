@@ -1,3 +1,10 @@
+"""
+module sqlterm.constants
+
+Contains definitions for constant values referenced through
+sqlterm
+"""
+
 import os
 from typing import List, Set
 

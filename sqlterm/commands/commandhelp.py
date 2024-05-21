@@ -1,3 +1,10 @@
+"""
+module sqlterm.commands.commandhelp
+
+Contains all definitions for the CommandHelp class which handles
+execution when the user types '%help ...' at the command line
+"""
+
 from argparse import ArgumentParser
 import shutil
 from typing import List
@@ -15,6 +22,12 @@ _command_help_arg_parser.add_argument("command_name", type=str, nargs="?")
 
 
 class CommandHelp(sqltermcommand.SqlTermCommand):
+    """
+    class CommandHelp
+
+    Class that handles execution when the user types '%help ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandHelp") -> ArgumentParser:
         return _command_help_arg_parser
