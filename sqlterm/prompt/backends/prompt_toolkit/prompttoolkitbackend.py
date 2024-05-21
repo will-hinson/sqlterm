@@ -1121,16 +1121,44 @@ class PromptToolkitBackend(PromptBackend):
             nonlocal focus_index
             objects_hsplit.children[focus_index].toggle_collapse()
 
+        @bindings.add(Keys.ControlHome)
+        def binding_first_entry(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = 0
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
+        @bindings.add(Keys.ControlEnd)
+        def binding_last_entry(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = len(objects_hsplit.children) - 1
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
         @bindings.add(Keys.Down)
         def binding_next_object(event: KeyPressEvent) -> None:
             nonlocal focus_index
             focus_index = min(focus_index + 1, len(objects_hsplit.children) - 1)
             event.app.layout.focus(objects_hsplit.children[focus_index])
 
+        @bindings.add(Keys.PageDown)
+        def binding_next_page(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            terminal_height: int = shutil.get_terminal_size().lines
+            focus_index = min(
+                focus_index + terminal_height, len(objects_hsplit.children) - 1
+            )
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
         @bindings.add(Keys.Up)
         def binding_previous_object(event: KeyPressEvent) -> None:
             nonlocal focus_index
             focus_index = max(0, focus_index - 1)
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
+        @bindings.add(Keys.PageUp)
+        def binding_previous_page(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            terminal_height: int = shutil.get_terminal_size().lines
+            focus_index = max(0, focus_index - terminal_height)
             event.app.layout.focus(objects_hsplit.children[focus_index])
 
         @bindings.add(Keys.ControlC)
