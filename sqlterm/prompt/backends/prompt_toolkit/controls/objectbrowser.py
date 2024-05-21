@@ -1,6 +1,6 @@
-from ....dataclasses import SqlReference
-
 from prompt_toolkit.application import Application
+
+from ....dataclasses import SqlReference
 
 
 class ObjectBrowser(Application):

@@ -17,8 +17,8 @@ class SqlitePromptModel(ConnectionPromptModel):
 
         if len(user_input[1]) == 0:
             return make_url(user_input[0])
-        else:
-            return make_url("/".join(user_input))
+
+        return make_url("/".join(user_input))
 
     @staticmethod
     def path_completer(
@@ -73,6 +73,8 @@ class SqlitePromptModel(ConnectionPromptModel):
                 return "Error: The provided path is not a file"
         elif user_input != ":memory:":
             return "Error: The provided file does not exist"
+
+        return None
 
     _input_models: List[InputModel] = [
         InputModel(

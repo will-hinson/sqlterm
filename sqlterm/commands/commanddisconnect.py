@@ -1,3 +1,10 @@
+"""
+module sqlterm.commands.commanddisconnect
+
+Contains all definitions for the CommandDisconnect class which handles
+execution when the user types '%disconnect ...' at the command line
+"""
+
 from argparse import ArgumentParser
 
 from . import sqltermcommand
@@ -13,6 +20,12 @@ _command_disconnect_arg_parser: ArgumentParser = ArgumentParser(
 
 
 class CommandDisconnect(sqltermcommand.SqlTermCommand):
+    """
+    class CommandDisconnect
+
+    Class that handles execution when the user types '%disconnect ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandDisconnect") -> ArgumentParser:
         return _command_disconnect_arg_parser

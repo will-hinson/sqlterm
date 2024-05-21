@@ -1,3 +1,10 @@
+"""
+module sqlterm.commands.commandedit
+
+Contains all definitions for the CommandEdit class which handles
+execution when the user types '%edit ...' at the command line
+"""
+
 from argparse import ArgumentParser
 from typing import Dict, List, Tuple
 
@@ -40,6 +47,12 @@ _queries_for_dialect: Dict[SqlDialect, str] = {
 
 
 class CommandEdit(sqltermcommand.SqlTermCommand):
+    """
+    class CommandEdit
+
+    Class that handles execution when the user types '%edit ...' at the command line
+    """
+
     @property
     def argument_parser(self: "CommandEdit") -> ArgumentParser:
         return _command_edit_arg_parser
@@ -119,3 +132,6 @@ class CommandEdit(sqltermcommand.SqlTermCommand):
 
             except SqlQueryException:
                 ...
+
+        # if we failed to find the source for the object, return None
+        return None

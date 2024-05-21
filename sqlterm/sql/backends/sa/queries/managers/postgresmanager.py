@@ -58,6 +58,8 @@ class PostgresManager(QueryManager):
         )
 
     def _init_cursor(self: "PostgresManager") -> None:
+        # pylint: disable=protected-access
+
         # initialize the cursor
         try:
             self.__cursor = self.connection._dbapi_connection.cursor()

@@ -4,6 +4,8 @@ from prompt_toolkit.cursor_shapes import CursorShape, CursorShapeConfig
 
 
 class SelectionCursorShapeConfig(CursorShapeConfig):
+    # pylint: disable=too-few-public-methods
+
     def get_cursor_shape(
         self: "SelectionCursorShapeConfig", application: Application[Any]
     ) -> CursorShape:

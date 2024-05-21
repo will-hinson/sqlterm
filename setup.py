@@ -1,7 +1,10 @@
 #!/usr/bin/env python
+# pylint: disable=missing-module-docstring
+
 import os
-from setuptools import find_packages, setup
 from typing import List
+
+from setuptools import find_packages, setup
 
 required_packages: List[str]
 with open(

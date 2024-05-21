@@ -259,7 +259,7 @@ class PostgresInspector(SqlInspector):
         connection: Connection,
     ) -> None:
         for schema_name, type_name in self._fetch_query_results(
-            """
+            r"""
             SELECT DISTINCT
                 b.nspname,
                 a.typname
