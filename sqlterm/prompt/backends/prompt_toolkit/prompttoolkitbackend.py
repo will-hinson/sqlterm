@@ -2,7 +2,7 @@ import functools
 import shutil
 import time
 import traceback
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Tuple, Type
 
 import os
 from prompt_toolkit import (
@@ -31,6 +31,7 @@ from prompt_toolkit.styles import (
     style_from_pygments_cls,
 )
 from prompt_toolkit.validation import Validator, ValidationError
+from pygments.style import Style as PygmentsStyle
 from pygments.styles import get_style_by_name, get_all_styles
 from pygments.token import Token
 import sqlparse
@@ -47,6 +48,7 @@ from ....sql.generic.dataclasses import SqlObject, SqlStructure
 from ....sql.generic.enums.sqldialect import SqlDialect
 from ....sql.exceptions import DialectException, DisconnectedException
 from .sqltermlexer import SqlTermLexer
+from .styles import sqlterm_styles
 
 
 class _InputModelCompleter(Completer):
@@ -904,12 +906,19 @@ class PromptToolkitBackend(PromptBackend):
         except KeyboardInterrupt:
             return ""
 
-    def _get_style_for_config(self: "PromptToolkitBackend") -> None:
-        return (
-            get_style_by_name(self.config.color_scheme)
-            if self.config.color_scheme in get_all_styles()
-            else get_style_by_name("dracula")
-        )
+    def _get_style_for_config(self: "PromptToolkitBackend") -> Type[PygmentsStyle]:
+        color_scheme: str = self.config.color_scheme
+
+        # try getting a default pygments color scheme
+        if color_scheme in get_all_styles():
+            return get_style_by_name(self.config.color_scheme)
+
+        # try getting a sqlterm builtin color scheme
+        if color_scheme in sqlterm_styles:
+            return sqlterm_styles[color_scheme]
+
+        # otherwise, default to dracula
+        return get_style_by_name("dracula")
 
     def hide_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()
