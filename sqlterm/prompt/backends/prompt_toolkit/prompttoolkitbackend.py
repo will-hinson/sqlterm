@@ -31,7 +31,6 @@ from prompt_toolkit.styles import (
     style_from_pygments_cls,
 )
 from prompt_toolkit.validation import Validator, ValidationError
-from pygments.style import Style as PygmentsStyle
 from pygments.styles import get_style_by_name, get_all_styles
 from pygments.token import Token
 import sqlparse
@@ -713,6 +712,7 @@ class PromptToolkitBackend(PromptBackend):
                 else "ffffff"
             )
             for token_type in (
+                Token.Comment,
                 Token.Error,
                 Token.Keyword,
                 Token.Literal.String.Symbol,
@@ -729,7 +729,7 @@ class PromptToolkitBackend(PromptBackend):
                     f"bg:#222222 fg:#{colors[Token.Name.Builtin]} noreverse"
                 ),
                 "bottom-toolbar.info": f"fg:#{colors[Token.Text]}",
-                "bottom-toolbar.text": "fg:darkgray",
+                "bottom-toolbar.text": f"fg:#{colors[Token.Comment]}",
                 "error.type": "fg:ansibrightred",
                 "error.message": "fg:ansibrightred",
                 "prompt-cell.bracket": f"fg:#{colors[Token.Text]}",
@@ -906,7 +906,7 @@ class PromptToolkitBackend(PromptBackend):
         except KeyboardInterrupt:
             return ""
 
-    def _get_style_for_config(self: "PromptToolkitBackend") -> Type[PygmentsStyle]:
+    def _get_style_for_config(self: "PromptToolkitBackend") -> Style:
         color_scheme: str = self.config.color_scheme
 
         # try getting a default pygments color scheme
