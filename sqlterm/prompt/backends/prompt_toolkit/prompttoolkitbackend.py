@@ -524,6 +524,16 @@ class PromptToolkitBackend(PromptBackend):
                     else selection_end - len(prev_line) - 1
                 )
 
+        @bindings.add(Keys.PageDown)
+        def binding_page_down(event: KeyPressEvent) -> None:
+            event.current_buffer.exit_selection()
+            event.current_buffer.cursor_down(count=shutil.get_terminal_size().lines)
+
+        @bindings.add(Keys.PageUp)
+        def binding_page_up(event: KeyPressEvent) -> None:
+            event.current_buffer.exit_selection()
+            event.current_buffer.cursor_up(count=shutil.get_terminal_size().lines)
+
         @bindings.add(Keys.ShiftLeft)
         def binding_shift_left(event: KeyPressEvent) -> None:
             buffer = event.app.current_buffer
