@@ -70,6 +70,12 @@ class CommandEdit(sqltermcommand.SqlTermCommand):
                 f"Unable to retrieve source for object '{self.args.object_name}'"
             )
 
+        # strip carriage returns
+        object_source = "\n".join(
+            line if len(line) < 1 or line[-1:] != "\r" else line[:-1]
+            for line in object_source.splitlines()
+        )
+
         # reshow the prompt containing the source of the object
         self.parent.handle_command(
             self.parent.context.backends.prompt.get_command(object_source)

@@ -34,6 +34,7 @@ class SqlTermConfig:
     version: str
     aliases: Dict[str, Alias]
     color_scheme: str
+    autoformat: bool
 
     @staticmethod
     def cannot_upgrade(from_config: "SqlTermConfig", to_version: str) -> NoReturn:
@@ -161,7 +162,10 @@ class SqlTermConfig:
         """
 
         return SqlTermConfig(
-            version=constants.CONFIG_VERSION, aliases={}, color_scheme="dracula"
+            version=constants.CONFIG_VERSION,
+            aliases={},
+            color_scheme="dracula",
+            autoformat=False,
         )
 
     def to_file(self: "SqlTermConfig", output_path: str) -> None:

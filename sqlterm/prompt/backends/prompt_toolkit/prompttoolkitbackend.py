@@ -47,6 +47,7 @@ from ....sql.generic.dataclasses import SqlObject, SqlStructure
 from ....sql.generic.enums.sqldialect import SqlDialect
 from ....sql.exceptions import DialectException, DisconnectedException
 from .sqltermlexer import SqlTermLexer
+from .styles import sqlterm_styles
 
 
 class _InputModelCompleter(Completer):
@@ -180,6 +181,18 @@ class PromptToolkitBackend(PromptBackend):
         # pylint: disable=too-many-locals,too-many-statements
 
         bindings: KeyBindings = KeyBindings()
+
+        def format_sql_document(sql_document: Document) -> Document:
+            return Document(
+                sqlparse.format(
+                    sql_document.text,
+                    reindent=True,
+                    indent_columns=True,
+                    indent_width=4,
+                    keyword_case="upper",
+                    use_space_around_operators=True,
+                )
+            )
 
         def insert_newline(buffer: Buffer) -> None:
             if buffer.document.current_line_after_cursor:
@@ -377,17 +390,25 @@ class PromptToolkitBackend(PromptBackend):
                 event.current_buffer.validate_and_handle()
                 return
 
-            # check if this is a blank last line and the previous line ends with ';'
+            # check if this is a syntactically complete SQL query we can execute
             if (
+                # if the current line is blank and the most recent character is ';'
                 len(event.current_buffer.document.current_line) == 0
                 and event.current_buffer.document.on_last_line
                 and current_text_stripped.endswith(";")
             ) or (
+                # if the current line is the first and only one and ends with a ';'
                 event.current_buffer.document.line_count == 1
                 and current_text_stripped.endswith(";")
                 and event.current_buffer.cursor_position
                 == len(event.current_buffer.document.text)
             ):
+                # check if the user has autoformat enabled and format if so
+                if self.config.autoformat:
+                    event.current_buffer.document = format_sql_document(
+                        event.current_buffer.document
+                    )
+
                 event.current_buffer.validate_and_handle()
             else:
                 insert_newline(event.current_buffer)
@@ -523,6 +544,16 @@ class PromptToolkitBackend(PromptBackend):
                     else selection_end - len(prev_line) - 1
                 )
 
+        @bindings.add(Keys.PageDown)
+        def binding_page_down(event: KeyPressEvent) -> None:
+            event.current_buffer.exit_selection()
+            event.current_buffer.cursor_down(count=shutil.get_terminal_size().lines)
+
+        @bindings.add(Keys.PageUp)
+        def binding_page_up(event: KeyPressEvent) -> None:
+            event.current_buffer.exit_selection()
+            event.current_buffer.cursor_up(count=shutil.get_terminal_size().lines)
+
         @bindings.add(Keys.ShiftLeft)
         def binding_shift_left(event: KeyPressEvent) -> None:
             buffer = event.app.current_buffer
@@ -590,7 +621,7 @@ class PromptToolkitBackend(PromptBackend):
                 buffer.cursor_left(count=buffer.document.cursor_position_col)
                 return
 
-            # move the cursor one to the right to select the bext character. we want to
+            # move the cursor one to the right to select the next character. we want to
             # do this when we started a selection or when there's an active selection that
             # is not at the end of its line
             event.app.current_buffer.cursor_right()
@@ -679,15 +710,8 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add(Keys.ControlT)
         def binding_ctrl_t(event: KeyPressEvent) -> None:
-            event.current_buffer.document = Document(
-                sqlparse.format(
-                    event.current_buffer.document.text,
-                    reindent=True,
-                    indent_columns=True,
-                    indent_width=4,
-                    keyword_case="upper",
-                    use_space_around_operators=True,
-                )
+            event.current_buffer.document = format_sql_document(
+                event.current_buffer.document
             )
 
         @bindings.add(Keys.ControlR)
@@ -711,6 +735,7 @@ class PromptToolkitBackend(PromptBackend):
                 else "ffffff"
             )
             for token_type in (
+                Token.Comment,
                 Token.Error,
                 Token.Keyword,
                 Token.Literal.String.Symbol,
@@ -727,7 +752,7 @@ class PromptToolkitBackend(PromptBackend):
                     f"bg:#222222 fg:#{colors[Token.Name.Builtin]} noreverse"
                 ),
                 "bottom-toolbar.info": f"fg:#{colors[Token.Text]}",
-                "bottom-toolbar.text": "fg:darkgray",
+                "bottom-toolbar.text": f"fg:#{colors[Token.Comment]}",
                 "error.type": "fg:ansibrightred",
                 "error.message": "fg:ansibrightred",
                 "prompt-cell.bracket": f"fg:#{colors[Token.Text]}",
@@ -904,12 +929,19 @@ class PromptToolkitBackend(PromptBackend):
         except KeyboardInterrupt:
             return ""
 
-    def _get_style_for_config(self: "PromptToolkitBackend") -> None:
-        return (
-            get_style_by_name(self.config.color_scheme)
-            if self.config.color_scheme in get_all_styles()
-            else get_style_by_name("dracula")
-        )
+    def _get_style_for_config(self: "PromptToolkitBackend") -> Style:
+        color_scheme: str = self.config.color_scheme
+
+        # try getting a default pygments color scheme
+        if color_scheme in get_all_styles():
+            return get_style_by_name(self.config.color_scheme)
+
+        # try getting a sqlterm builtin color scheme
+        if color_scheme in sqlterm_styles:
+            return sqlterm_styles[color_scheme]
+
+        # otherwise, default to dracula
+        return get_style_by_name("dracula")
 
     def hide_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()
@@ -1121,16 +1153,44 @@ class PromptToolkitBackend(PromptBackend):
             nonlocal focus_index
             objects_hsplit.children[focus_index].toggle_collapse()
 
+        @bindings.add(Keys.ControlHome)
+        def binding_first_entry(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = 0
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
+        @bindings.add(Keys.ControlEnd)
+        def binding_last_entry(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            focus_index = len(objects_hsplit.children) - 1
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
         @bindings.add(Keys.Down)
         def binding_next_object(event: KeyPressEvent) -> None:
             nonlocal focus_index
             focus_index = min(focus_index + 1, len(objects_hsplit.children) - 1)
             event.app.layout.focus(objects_hsplit.children[focus_index])
 
+        @bindings.add(Keys.PageDown)
+        def binding_next_page(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            terminal_height: int = shutil.get_terminal_size().lines
+            focus_index = min(
+                focus_index + terminal_height, len(objects_hsplit.children) - 1
+            )
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
         @bindings.add(Keys.Up)
         def binding_previous_object(event: KeyPressEvent) -> None:
             nonlocal focus_index
             focus_index = max(0, focus_index - 1)
+            event.app.layout.focus(objects_hsplit.children[focus_index])
+
+        @bindings.add(Keys.PageUp)
+        def binding_previous_page(event: KeyPressEvent) -> None:
+            nonlocal focus_index
+            terminal_height: int = shutil.get_terminal_size().lines
+            focus_index = max(0, focus_index - terminal_height)
             event.app.layout.focus(objects_hsplit.children[focus_index])
 
         @bindings.add(Keys.ControlC)

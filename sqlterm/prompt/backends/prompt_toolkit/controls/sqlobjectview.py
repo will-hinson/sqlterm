@@ -49,7 +49,7 @@ class SqlObjectView(Window):
     __expanded: bool
     index: int
     indent_level: int
-    parent: HSplit = None
+    parent: HSplit = None  # type: ignore
     sql_object: SqlObject
 
     indent_length: int = 2
