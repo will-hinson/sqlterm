@@ -182,6 +182,18 @@ class PromptToolkitBackend(PromptBackend):
 
         bindings: KeyBindings = KeyBindings()
 
+        def format_sql_document(sql_document: Document) -> Document:
+            return Document(
+                sqlparse.format(
+                    sql_document.text,
+                    reindent=True,
+                    indent_columns=True,
+                    indent_width=4,
+                    keyword_case="upper",
+                    use_space_around_operators=True,
+                )
+            )
+
         def insert_newline(buffer: Buffer) -> None:
             if buffer.document.current_line_after_cursor:
                 # When we are in the middle of a line. Always insert a newline.
@@ -378,17 +390,25 @@ class PromptToolkitBackend(PromptBackend):
                 event.current_buffer.validate_and_handle()
                 return
 
-            # check if this is a blank last line and the previous line ends with ';'
+            # check if this is a syntactically complete SQL query we can execute
             if (
+                # if the current line is blank and the most recent character is ';'
                 len(event.current_buffer.document.current_line) == 0
                 and event.current_buffer.document.on_last_line
                 and current_text_stripped.endswith(";")
             ) or (
+                # if the current line is the first and only one and ends with a ';'
                 event.current_buffer.document.line_count == 1
                 and current_text_stripped.endswith(";")
                 and event.current_buffer.cursor_position
                 == len(event.current_buffer.document.text)
             ):
+                # check if the user has autoformat enabled and format if so
+                if self.config.autoformat:
+                    event.current_buffer.document = format_sql_document(
+                        event.current_buffer.document
+                    )
+
                 event.current_buffer.validate_and_handle()
             else:
                 insert_newline(event.current_buffer)
@@ -690,15 +710,8 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add(Keys.ControlT)
         def binding_ctrl_t(event: KeyPressEvent) -> None:
-            event.current_buffer.document = Document(
-                sqlparse.format(
-                    event.current_buffer.document.text,
-                    reindent=True,
-                    indent_columns=True,
-                    indent_width=4,
-                    keyword_case="upper",
-                    use_space_around_operators=True,
-                )
+            event.current_buffer.document = format_sql_document(
+                event.current_buffer.document
             )
 
         @bindings.add(Keys.ControlR)
