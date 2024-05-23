@@ -1,3 +1,10 @@
+"""
+module sqlterm.prompt.backends.prompt_toolkit.completers.defaultcompleter
+
+Contains the definition of the DefaultCompleter class, a context-insensitive completer
+that is the default used by sqlterm when no other more specific option is available
+"""
+
 from typing import Dict, List, Set
 
 from Levenshtein import distance
@@ -31,6 +38,13 @@ _sql_object_type_short_names: Dict[SqlObjectType, str] = {
 
 
 class DefaultCompleter(Completer):
+    """
+    class DefaultCompleter
+
+    Context-insensitive completer that is the default used by sqlterm when
+    no other more specific option is available
+    """
+
     inspector_structure: SqlStructure | None
     inspector_structure_flattened: Set[SqlObject] | None
 
@@ -44,6 +58,19 @@ class DefaultCompleter(Completer):
         self._system_completer = SystemCompleter()
 
     def clear_completions(self: "DefaultCompleter") -> None:
+        """
+        Clears any completions currently stored by this DefaultCompleter instance.
+
+        Args:
+            None
+
+        Returns:
+            None
+
+        Raises:
+            Nothing
+        """
+
         self.inspector_structure = None
         self.inspector_structure_flattened = None
 
@@ -151,5 +178,19 @@ class DefaultCompleter(Completer):
         ]
 
     def refresh_structure(self: "DefaultCompleter", structure: SqlStructure) -> None:
+        """
+        Refreshes the cached completions used by this DefaultCompleter instance using
+        the provided SqlStructure instance.
+
+        Args:
+            structure (SqlStructure): The database structure to get completions from
+
+        Returns:
+            Nothing. The internal cache of this instance is populated
+
+        Raises:
+            Nothing
+        """
+
         self.inspector_structure = structure
         self.inspector_structure_flattened = self.inspector_structure.flatten()

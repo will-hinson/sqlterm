@@ -1,8 +1,16 @@
-from pygments.style import Style, StyleMeta
+"""
+module sqlterm.prompt.backends.prompt_toolkit.styles.tokyonightdark
+
+Contains the definition of the 'tokyo-night-dark' custom built-in color scheme
+"""
+
+from pygments.style import Style
 from pygments.token import Token
 
 
 class TokyoNightDark(Style):
+    # pylint: disable=missing-class-docstring, too-few-public-methods
+
     styles = {
         Token: "",
         Token.Comment: "#646B8A",

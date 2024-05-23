@@ -2,7 +2,7 @@ import functools
 import shutil
 import time
 import traceback
-from typing import Any, Callable, Dict, Iterable, List, Tuple, Type
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 import os
 from prompt_toolkit import (
@@ -601,7 +601,7 @@ class PromptToolkitBackend(PromptBackend):
                 buffer.cursor_left(count=buffer.document.cursor_position_col)
                 return
 
-            # move the cursor one to the right to select the bext character. we want to
+            # move the cursor one to the right to select the next character. we want to
             # do this when we started a selection or when there's an active selection that
             # is not at the end of its line
             event.app.current_buffer.cursor_right()
