@@ -1,9 +1,24 @@
+"""
+module sqlterm.commands.dataclasses.joblastrundetails
+
+Contains the definition of the JobLastRunDetails class, a dataclass that
+represents the status of the last run of a SQL job
+"""
+
 from dataclasses import dataclass
 from datetime import date
 
 
 @dataclass
 class JobLastRunDetails:
+    """
+    class JobLastRunDetails
+
+    Dataclass that represents the status of the last run of a SQL job
+    """
+
+    # pylint: disable=too-many-instance-attributes
+
     job_id: str
     run_requested_source: str | None
     run_requested_date: date
