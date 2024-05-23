@@ -6,12 +6,12 @@ execution when the user types '%jobs ...' at the command line
 """
 
 from argparse import ArgumentParser
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple
 from typing import Dict, List, Tuple
 
 from . import sqltermcommand
 from .. import constants
-from .dataclasses import JobStatusRecord
+from .dataclasses import JobLastRunDetails, JobStatusRecord, JobStep
 from .exceptions import UnknownJobException
 from ..sql.exceptions import DisconnectedException
 from ..sql.generic import RecordSet
@@ -27,6 +27,11 @@ _command_jobs_arg_parser: ArgumentParser = ArgumentParser(
 
 _sub_parsers = _command_jobs_arg_parser.add_subparsers(dest="subcommand")
 _sub_parsers.required = True
+
+_command_jobs_detail_parser = _sub_parsers.add_parser(
+    "detail", help="Gets details regarding a specific job include stats on recent runs"
+)
+_command_jobs_detail_parser.add_argument("job_name")
 
 _command_jobs_list_parser = _sub_parsers.add_parser(
     "list", help="Lists all SQL jobs including name and current status"
@@ -49,7 +54,10 @@ _command_jobs_stop_parser.add_argument("job_name", type=str)
 
 @dataclass
 class _JobQuerySet:
+    get_job_description: str
     get_job_id: str
+    get_job_last_run: str
+    get_job_steps: str
     list_jobs: str
     start_job_by_id: str
     stop_job_by_id: str
@@ -69,6 +77,14 @@ _job_status_column_mapping: Dict[str, str] = {
 
 _queries_for_dialect: Dict[SqlDialect, _JobQuerySet] = {
     SqlDialect.TSQL: _JobQuerySet(
+        get_job_description="""
+        SELECT
+            description
+        FROM
+            msdb.dbo.sysjobs
+        WHERE
+            [job_id] = '?';
+        """,
         get_job_id="""
         SELECT
             job_id
@@ -76,6 +92,61 @@ _queries_for_dialect: Dict[SqlDialect, _JobQuerySet] = {
             msdb.dbo.sysjobs
         WHERE
             [name] = '?';
+        """,
+        get_job_last_run="""
+        WITH cteRunSourceIDs AS (
+            SELECT
+                *
+            FROM (
+                VALUES
+                    (1, 'Scheduler'),
+                    (2, 'Alterer'),
+                    (3, 'Boot'),
+                    (4, 'User'),
+                    (6, 'Idle Schedule')
+            ) _ (
+                [run_requested_source],
+                [friendly_name]
+            )
+        )
+        SELECT
+            a.[job_id],
+            run_requested_source = c.[friendly_name],
+            a.[run_requested_date],
+            a.[start_execution_date],
+            a.[last_executed_step_id],
+            a.[stop_execution_date],
+            b.[message]
+        FROM (
+            SELECT TOP 1
+                [job_id],
+                [run_requested_source],
+                [run_requested_date],
+                [start_execution_date],
+                [last_executed_step_id],
+                [stop_execution_date],
+                [job_history_id]
+            FROM
+                msdb.dbo.sysjobactivity
+            WHERE
+                [job_id] = '?'
+        ) AS a
+        LEFT JOIN msdb.dbo.sysjobhistory AS b ON
+            a.[job_history_id] = b.[instance_id]
+        LEFT JOIN cteRunSourceIDs AS c ON
+            a.[run_requested_source] = c.[run_requested_source];
+        """,
+        get_job_steps="""
+        SELECT
+            [step_name],
+            [subsystem],
+            [database_name]
+        FROM
+            msdb.dbo.sysjobsteps
+        WHERE
+            [job_id] = '?'
+        ORDER BY
+            [step_id] ASC;
         """,
         list_jobs="""
         SELECT
@@ -202,6 +273,25 @@ class CommandJobs(sqltermcommand.SqlTermCommand):
     def argument_parser(self: "CommandJobs") -> ArgumentParser:
         return _command_jobs_arg_parser
 
+    def _display_job_last_run(self: "CommandJobs", last_run: JobLastRunDetails) -> None:
+        self.parent.print_message_sql("Last run details:")
+
+        prefixes: List[Tuple[str, str]] = [
+            ("run_requested_date", "Request date:"),
+            ("run_requested_source", "Request source:"),
+            ("is_running", "Running:"),
+            ("start_execution_date", "Start date:"),
+            ("stop_execution_date", "End date:"),
+            ("message", "Message:"),
+        ]
+        justify_length: int = max(len(prefix_tuple[1]) for prefix_tuple in prefixes)
+        for attr_name, prefix in prefixes:
+            self.parent.print_info(
+                f"    {prefix.ljust(justify_length)} {getattr(last_run, attr_name)}"
+            )
+
+        self.parent.print_info()
+
     def execute(self: "CommandJobs") -> None:
         # ensure that the target dialect has queries implemented and that the
         # sql backend is currently connected
@@ -218,6 +308,8 @@ class CommandJobs(sqltermcommand.SqlTermCommand):
 
         # determine which subcommand to perform
         match self.args.subcommand:
+            case "detail":
+                self._job_detail(query_set)
             case "list" | "status":
                 self._job_list(query_set)
             case "start":
@@ -228,6 +320,20 @@ class CommandJobs(sqltermcommand.SqlTermCommand):
                 raise NotImplementedError(
                     f"Subcommand '%jobs {self.args.subcommand}' not implemented"
                 )
+
+    def _fetch_job_description(
+        self: "CommandJobs", job_id: str, query_set: _JobQuerySet
+    ) -> str:
+        results: List[Tuple] = self.parent.context.backends.sql.fetch_results_for(
+            self.parent.context.backends.sql.make_query(
+                query_set.get_job_description.replace("?", job_id.replace("'", "''"))
+            )
+        )
+
+        if len(results) > 0:
+            return str(results[0][0])
+
+        raise UnknownJobException(f"A job with id '{job_id}' was not found")
 
     def _fetch_job_id(
         self: "CommandJobs", job_name: str, query_set: _JobQuerySet
@@ -252,6 +358,64 @@ class CommandJobs(sqltermcommand.SqlTermCommand):
                 self.parent.context.backends.sql.make_query(query_set.list_jobs)
             )
         ]
+
+    def _fetch_job_last_run(
+        self: "CommandJobs", job_id: str, query_set: _JobQuerySet
+    ) -> JobLastRunDetails | None:
+        results: List[Tuple] = self.parent.context.backends.sql.fetch_results_for(
+            self.parent.context.backends.sql.make_query(
+                query_set.get_job_last_run.replace("?", job_id.replace("'", "''"))
+            )
+        )
+
+        if len(results) > 0:
+            return JobLastRunDetails(*results[0])
+
+        return None
+
+    def _fetch_job_steps(
+        self: "CommandJobs", job_id: str, query_set: _JobQuerySet
+    ) -> List[JobStep]:
+        return [
+            JobStep(*record_tuple)
+            for record_tuple in self.parent.context.backends.sql.fetch_results_for(
+                self.parent.context.backends.sql.make_query(
+                    query_set.get_job_steps.replace("?", job_id.replace("'", "''"))
+                )
+            )
+        ]
+
+    def _job_detail(self: "CommandJobs", query_set: _JobQuerySet) -> None:
+        job_name: str = self.args.job_name
+        job_id: str = self._fetch_job_id(job_name, query_set)
+
+        # display the name of the job and a description
+        self.parent.print_message_sql(job_name)
+        self.parent.print_info(self._fetch_job_description(job_id, query_set))
+        self.parent.print_info()
+
+        # get the status of the most recent run
+        last_run: JobLastRunDetails = self._fetch_job_last_run(job_id, query_set)
+        if last_run is None:
+            self.parent.print_info("Unable show details of last job run.")
+            return
+
+        self._display_job_last_run(last_run)
+
+        # display all of the job steps
+        self.parent.print_message_sql("Steps:")
+        for line in self.parent.context.backends.table.construct_table(
+            RecordSet(
+                columns=["Name", "Subsystem", "Target Database"],
+                records=[
+                    astuple(job_step)
+                    for job_step in self._fetch_job_steps(job_id, query_set)
+                ],
+            )
+        ).splitlines():
+            print(f"    {line}")
+
+        self.parent.print_info()
 
     def _job_list(self: "CommandJobs", query_set: _JobQuerySet) -> None:
         columns: List[str] = [

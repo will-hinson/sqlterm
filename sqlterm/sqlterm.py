@@ -130,6 +130,9 @@ class SqlTerm:
     def invalidate_completions(self: "SqlTerm") -> None:
         self.context.backends.sql.invalidate_completions()
 
+    def print_info(self: "SqlTerm", message: str = "") -> None:
+        self.context.backends.prompt.display_info(message)
+
     def print_message_sql(self: "SqlTerm", message: str) -> None:
         self.context.backends.prompt.display_message_sql(message)
 
