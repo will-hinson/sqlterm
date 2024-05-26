@@ -313,10 +313,10 @@ class PostgresInspector(SqlInspector):
         # database level. note that we'll only be able to get schemas in the current
         # database context as postgres doesn't allow cross-database references
         database_name: str = self._get_current_database_name(connection)
-        schemas_by_database: Dict[str, Dict[str, SqlObject]] = (
-            self._get_schemas_by_database(
-                current_database=database_name, connection=connection
-            )
+        schemas_by_database: Dict[
+            str, Dict[str, SqlObject]
+        ] = self._get_schemas_by_database(
+            current_database=database_name, connection=connection
         )
 
         # populate all of the objects into the database/schema mapping

@@ -363,7 +363,8 @@ class PromptToolkitBackend(PromptBackend):
 
         # NOTE: disable the default i-search
         @bindings.add(Keys.ControlS)
-        def binding_ctrl_s(_: KeyPressEvent) -> None: ...
+        def binding_ctrl_s(_: KeyPressEvent) -> None:
+            ...
 
         @bindings.add(Keys.ControlY, save_before=lambda _: False)
         def binding_ctrl_y(event: KeyPressEvent) -> None:
@@ -429,9 +430,10 @@ class PromptToolkitBackend(PromptBackend):
                 if event.current_buffer.document.selection is not None
                 else None
             )
-            selection_start, selection_end = (
-                event.current_buffer.document.selection_range()
-            )
+            (
+                selection_start,
+                selection_end,
+            ) = event.current_buffer.document.selection_range()
             line_indexes: List[int] = selected_lines(event)
 
             # check if the first selected line is the last overall line and do nothing if so
@@ -492,9 +494,10 @@ class PromptToolkitBackend(PromptBackend):
                 if event.current_buffer.document.selection is not None
                 else None
             )
-            selection_start, selection_end = (
-                event.current_buffer.document.selection_range()
-            )
+            (
+                selection_start,
+                selection_end,
+            ) = event.current_buffer.document.selection_range()
             line_indexes: List[int] = selected_lines(event)
 
             # check if the first selected line is the first overall line and do nothing if so
