@@ -14,16 +14,20 @@ from ....sql.generic.enums import SqlDialect
 from ....prompt.abstract import PromptBackend
 
 
-class _CustomAnsiSqlLexer(SqlLexer): ...
+class _CustomAnsiSqlLexer(SqlLexer):
+    ...
 
 
-class _CustomMySqlLexer(MySqlLexer): ...
+class _CustomMySqlLexer(MySqlLexer):
+    ...
 
 
-class _CustomPostgresLexer(PostgresLexer): ...
+class _CustomPostgresLexer(PostgresLexer):
+    ...
 
 
-class _CustomTransactSqlLexer(TransactSqlLexer): ...
+class _CustomTransactSqlLexer(TransactSqlLexer):
+    ...
 
 
 class SqlTermLexer(Lexer):
@@ -127,28 +131,31 @@ class SqlTermLexer(Lexer):
             case constants.PREFIX_SQLTERM_COMMAND:
 
                 def _get_line_sqlterm_command(line_number: int) -> StyleAndTextTuples:
-                    command_tokens: List[str] = self._shell_split(
-                        document.lines[line_number][
-                            len(leading_whitespace)
-                            + len(constants.PREFIX_SQLTERM_COMMAND) :
-                        ]
-                    )
+                    if line_number == 0:
+                        command_tokens: List[str] = self._shell_split(
+                            document.lines[line_number][
+                                len(leading_whitespace)
+                                + len(constants.PREFIX_SQLTERM_COMMAND) :
+                            ]
+                        )
 
-                    return [
-                        ("", leading_whitespace),
-                        (
-                            "class:shell.command-sigil",
-                            constants.PREFIX_SQLTERM_COMMAND,
-                        ),
-                        (
-                            "class:shell.command",
-                            command_tokens[0] if len(command_tokens) > 0 else "",
-                        ),
-                        *(
-                            ("class:shell.command-args", token)
-                            for token in command_tokens[1:]
-                        ),
-                    ]
+                        return [
+                            ("", leading_whitespace),
+                            (
+                                "class:shell.command-sigil",
+                                constants.PREFIX_SQLTERM_COMMAND,
+                            ),
+                            (
+                                "class:shell.command",
+                                command_tokens[0] if len(command_tokens) > 0 else "",
+                            ),
+                            *(
+                                ("class:shell.command-args", token)
+                                for token in command_tokens[1:]
+                            ),
+                        ]
+
+                    return [("class:shell.command-args", document.lines[line_number])]
 
                 return _get_line_sqlterm_command
 

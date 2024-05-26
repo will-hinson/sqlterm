@@ -42,10 +42,10 @@ class CommandInstall(sqltermcommand.SqlTermCommand):
         return _command_install_arg_parser
 
     def execute(self: "CommandInstall") -> None:
-        required_packages: List[str] = (
-            self.parent.context.backends.sql.required_packages_for_dialect(
-                self.args.dialect_string
-            )
+        required_packages: List[
+            str
+        ] = self.parent.context.backends.sql.required_packages_for_dialect(
+            self.args.dialect_string
         )
         print(
             f"Detected {len(required_packages)} required package"

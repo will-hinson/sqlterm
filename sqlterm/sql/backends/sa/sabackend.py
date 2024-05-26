@@ -239,7 +239,8 @@ class SaBackend(SqlBackend):
 
         # patch the _autobegin() method with one that doesn't start a transaction
         # and set up autocommit on the underlying connection object if we can
-        def _no_autobegin(*_, **__) -> None: ...
+        def _no_autobegin(*_, **__) -> None:
+            ...
 
         Connection._autobegin = _no_autobegin
 

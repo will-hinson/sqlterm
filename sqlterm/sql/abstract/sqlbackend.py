@@ -80,19 +80,24 @@ class SqlBackend(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def display_progress(self: "SqlBackend", *progress_messages: str) -> None: ...
+    def display_progress(self: "SqlBackend", *progress_messages: str) -> None:
+        ...
 
     @abstractmethod
-    def execute(self: "SqlBackend", query: Query) -> None: ...
+    def execute(self: "SqlBackend", query: Query) -> None:
+        ...
 
     @abstractmethod
-    def fetch_results_for(self: "SqlBackend", query: Query) -> List[Tuple]: ...
+    def fetch_results_for(self: "SqlBackend", query: Query) -> List[Tuple]:
+        ...
 
     @abstractmethod
-    def get_status(self: "SqlBackend") -> SqlStatusDetails: ...
+    def get_status(self: "SqlBackend") -> SqlStatusDetails:
+        ...
 
     @abstractmethod
-    def invalidate_completions(self: "SqlBackend") -> None: ...
+    def invalidate_completions(self: "SqlBackend") -> None:
+        ...
 
     @property
     @abstractmethod
@@ -113,17 +118,18 @@ class SqlBackend(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def make_query(self: "SqlBackend", query_str: str) -> Query: ...
+    def make_query(self: "SqlBackend", query_str: str) -> Query:
+        ...
 
     @abstractmethod
-    def required_packages_for_dialect(
-        self: "SqlBackend", dialect: str
-    ) -> List[str]: ...
+    def required_packages_for_dialect(self: "SqlBackend", dialect: str) -> List[str]:
+        ...
 
     @abstractmethod
     def resolve_connection_string(
         self: "SqlBackend", connection_string: str, test_connection: bool = False
-    ) -> str: ...
+    ) -> str:
+        ...
 
 
 # pylint: disable=wrong-import-position

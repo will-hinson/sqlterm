@@ -7,4 +7,5 @@ class Query(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def text(self: "Query") -> str: ...
+    def text(self: "Query") -> str:
+        ...
