@@ -6,7 +6,7 @@ is extended by all sqlterm prompt integrations (i.e., prompt_toolkit)
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Any, Iterable, List
+from typing import Any, Iterable, List, Type
 
 
 from ..dataclasses import InputModel, SqlReference
@@ -30,6 +30,9 @@ class PromptBackend(metaclass=ABCMeta):
     def __init__(self: "PromptBackend", config: SqlTermConfig) -> None:
         self.config = config
         self._dialect = SqlDialect.GENERIC
+
+    @abstractmethod
+    def add_style(self: "PromptBackend", name: str, style_class: Type) -> None: ...
 
     @abstractmethod
     def change_dialect(self: "PromptBackend", dialect: SqlDialect) -> None:
@@ -244,6 +247,9 @@ class PromptBackend(metaclass=ABCMeta):
         Raises:
             Nothing
         """
+
+    @abstractmethod
+    def refresh_style(self: "PromptBackend") -> None: ...
 
     @abstractmethod
     def show_cursor(self: "PromptBackend") -> None:
