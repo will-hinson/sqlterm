@@ -1,3 +1,10 @@
+"""
+module sqlterm.sql.exceptions
+
+Contains definitions of all exceptions that are thrown directly by a SQL backend
+as a result of the state of a connection or query
+"""
+
 from .connectionexistsexception import ConnectionExistsException
 from .connectionfailedexception import ConnectionFailedException
 from .dialectexception import DialectException

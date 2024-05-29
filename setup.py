@@ -20,7 +20,7 @@ with open(
 setup(
     name="sqlterm",
     author="Will Hinson",
-    version="0.1.0",
+    version="0.2.0",
     url="https://github.com/will-hinson/sqlterm",
     description="A modern command-line client for SQL",
     packages=find_packages(),

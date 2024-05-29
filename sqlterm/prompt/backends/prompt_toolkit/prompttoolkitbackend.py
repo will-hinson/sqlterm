@@ -2,7 +2,7 @@ import functools
 import shutil
 import time
 import traceback
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Tuple, Type
 
 import os
 from prompt_toolkit import (
@@ -141,6 +141,9 @@ class PromptToolkitBackend(PromptBackend):
         )
         self.__current_statement_index = 0
         shortcuts.clear()
+
+    def add_style(self: "PromptBackend", name: str, style_class: Type) -> None:
+        sqlterm_styles[name] = style_class
 
     def change_dialect(self: "PromptToolkitBackend", dialect: SqlDialect) -> None:
         self._dialect = dialect
@@ -363,8 +366,7 @@ class PromptToolkitBackend(PromptBackend):
 
         # NOTE: disable the default i-search
         @bindings.add(Keys.ControlS)
-        def binding_ctrl_s(_: KeyPressEvent) -> None:
-            ...
+        def binding_ctrl_s(_: KeyPressEvent) -> None: ...
 
         @bindings.add(Keys.ControlY, save_before=lambda _: False)
         def binding_ctrl_y(event: KeyPressEvent) -> None:
@@ -1046,6 +1048,14 @@ class PromptToolkitBackend(PromptBackend):
         self: "PromptToolkitBackend", structure: SqlStructure
     ) -> None:
         self.__completer.refresh_structure(structure)
+
+    def refresh_style(self: "PromptToolkitBackend") -> None:
+        self.__session.style = merge_styles(
+            [
+                self._default_style,
+                style_from_pygments_cls(self._get_style_for_config()),
+            ]
+        )
 
     @property
     def session(self: "PromptToolkitBackend") -> PromptSession:

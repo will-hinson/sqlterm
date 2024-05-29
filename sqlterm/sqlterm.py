@@ -1,9 +1,12 @@
 import argparse
+import importlib
 import os
-from typing import Type
+import pkgutil
+from types import ModuleType
+from typing import List, Type
 
 from . import constants
-from .commands import SqlTermCommand
+from .commands import sqltermcommand, SqlTermCommand
 from .commands.exceptions import AliasExistsException, HelpShown, NoAliasExistsException
 from .config import Alias, SqlTermConfig
 from .context import BackendSet, SqlTermContext
@@ -45,6 +48,9 @@ class SqlTerm:
         self.context.backends.prompt.parent = self
         self.context.backends.sql.parent = self
         self.context.backends.sql.table_backend = self.context.backends.table
+
+        # load any plugins that are installed
+        self._load_plugins()
 
     def get_command(self: "SqlTerm") -> str:
         return self.context.backends.prompt.get_command()
@@ -129,6 +135,58 @@ class SqlTerm:
 
     def invalidate_completions(self: "SqlTerm") -> None:
         self.context.backends.sql.invalidate_completions()
+
+    def _load_plugin_module(self: "SqlTerm", plugin_module: ModuleType) -> None:
+        # try loading custom commands
+        if hasattr(plugin_module, "commands"):
+            if not isinstance(plugin_module.commands, dict):
+                print(
+                    f"Unable to fully load plugin module {plugin_module.__name__}: "
+                    "commands attribute is not a dict"
+                )
+                return
+
+            for name, command_class in plugin_module.commands.items():
+                # pylint: disable=no-member
+                sqltermcommand.available_commands[name] = command_class
+
+        # try loading custom styles
+        if hasattr(plugin_module, "styles"):
+            if not isinstance(plugin_module.commands, dict):
+                print(
+                    f"Unable to fully load plugin module {plugin_module.__name__}: "
+                    "styles attribute is not a dict"
+                )
+                return
+
+            if type(self.context.backends.prompt) not in plugin_module.styles:
+                return
+
+            for name, style_class in plugin_module.styles[
+                type(self.context.backends.prompt)
+            ].items():
+                self.context.backends.prompt.add_style(name, style_class)
+
+            self.context.backends.prompt.refresh_style()
+
+    def _load_plugins(self: "SqlTerm") -> None:
+        # load all modules with the prefix 'sqlterm_'. this pattern comes from
+        # https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/
+        #
+        # pylint: disable=broad-exception-caught
+        discovered_plugins: List[ModuleType]
+        try:
+            discovered_plugins = [
+                importlib.import_module(name)
+                for _, name, __ in pkgutil.iter_modules()
+                if name.startswith("sqlterm_")
+            ]
+        except Exception as exc:
+            self.context.backends.prompt.display_exception(exc, unhandled=True)
+            return
+
+        for plugin_module in discovered_plugins:
+            self._load_plugin_module(plugin_module)
 
     def print_info(self: "SqlTerm", message: str = "") -> None:
         self.context.backends.prompt.display_info(message)

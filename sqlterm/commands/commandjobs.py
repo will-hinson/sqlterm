@@ -43,7 +43,7 @@ _command_jobs_start_parser = _sub_parsers.add_parser(
 _command_jobs_start_parser.add_argument("job_name")
 
 _command_jobs_status_parser = _sub_parsers.add_parser(
-    "status", help="Alias for the '%jobs list' subcommand"
+    "status", help="Alias for the '%%jobs list' subcommand"
 )
 
 _command_jobs_stop_parser = _sub_parsers.add_parser(

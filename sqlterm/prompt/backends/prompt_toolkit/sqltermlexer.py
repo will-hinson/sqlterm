@@ -1,3 +1,11 @@
+"""
+module sqlterm.prompt.backend.prompt_toolkit.sqltermlexer
+
+Contains the definition of the SqlTermLexer class, the default lexer used by the
+prompt_toolkit backend. It is able to detect the current command type based on
+the contents of the input buffer and lexer accordingly.
+"""
+
 import functools
 import os
 from typing import Callable, Dict, List
@@ -31,6 +39,13 @@ class _CustomTransactSqlLexer(TransactSqlLexer):
 
 
 class SqlTermLexer(Lexer):
+    """
+    class SqlTermLexer
+
+    The default lexer used by the prompt_toolkit backend. It is able to detect the current
+    command type based on the contents of the input buffer and lexer accordingly.
+    """
+
     __parent: "PromptBackend"
 
     dialect_lexers: Dict[SqlDialect, PygmentsLexer]
