@@ -364,9 +364,17 @@ class PromptToolkitBackend(PromptBackend):
             except Exception as exc:
                 self.display_exception(exc, unhandled=True)
 
-        # NOTE: disable the default i-search
         @bindings.add(Keys.ControlS)
-        def binding_ctrl_s(_: KeyPressEvent) -> None: ...
+        def binding_ctrl_s(_: KeyPressEvent) -> None:
+            try:
+                if not self.parent.context.backends.sql.profiling_enabled:
+                    self.parent.context.backends.sql.enable_profiling()
+                    self.parent.print_info("Query profiling enabled.")
+                else:
+                    self.parent.context.backends.sql.disable_profiling()
+                    self.parent.print_info("Query profiling disabled.")
+            except (DisconnectedException, NotImplementedError) as exc:
+                self.display_exception(exc, unhandled=False)
 
         @bindings.add(Keys.ControlY, save_before=lambda _: False)
         def binding_ctrl_y(event: KeyPressEvent) -> None:

@@ -31,6 +31,7 @@ def _human_readable_duration(seconds: float) -> str:
 
 
 class SaSpoolMonitor(Thread):
+    __display_progress: bool
     __parent: "sabackend.SaBackend"
     __spool: List[Tuple]
     __stopped: bool
@@ -40,10 +41,14 @@ class SaSpoolMonitor(Thread):
     done: bool
 
     def __init__(
-        self: "SaSpoolMonitor", spool: List[Tuple], parent: "sabackend.SaBackend"
+        self: "SaSpoolMonitor",
+        spool: List[Tuple],
+        parent: "sabackend.SaBackend",
+        display_progress: bool,
     ) -> None:
         super().__init__()
 
+        self.__display_progress = display_progress
         self.__parent = parent
         self.__spool = spool
 
@@ -62,18 +67,20 @@ class SaSpoolMonitor(Thread):
         tab_sep: str = " " * constants.SPACES_IN_TAB
 
         while not self.__stopped:
-            # output the current time elapsed and the number of records received
-            self.parent.display_progress(
-                constants.PROGRESS_CHARACTERS[self.__load_char_offset],
-                " ",
-                _human_readable_duration(time.time() - start_time),
-                tab_sep,
-                f"{len(self.spool):,} row{'s' if len(self.spool) != 1 else ''}",
-                "" if not self.done else " \u2713",
-            )
-            self.__load_char_offset = (self.__load_char_offset + 1) % len(
-                constants.PROGRESS_CHARACTERS
-            )
+            if self.__display_progress:
+                # output the current time elapsed and the number of records received
+                self.parent.display_progress(
+                    constants.PROGRESS_CHARACTERS[self.__load_char_offset],
+                    " ",
+                    _human_readable_duration(time.time() - start_time),
+                    tab_sep,
+                    f"{len(self.spool):,} row{'s' if len(self.spool) != 1 else ''}",
+                    "" if not self.done else " \u2713",
+                )
+                self.__load_char_offset = (self.__load_char_offset + 1) % len(
+                    constants.PROGRESS_CHARACTERS
+                )
+
             time.sleep(0.1)
 
         # clear the line we're currently on

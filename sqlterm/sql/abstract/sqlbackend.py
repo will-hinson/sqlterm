@@ -65,6 +65,9 @@ class SqlBackend(metaclass=ABCMeta):
         """
 
     @abstractmethod
+    def disable_profiling(self: "SqlBackend") -> None: ...
+
+    @abstractmethod
     def disconnect(self: "SqlBackend") -> None:
         """
         Disconnects any current SQL session established by this SqlBackend.
@@ -80,24 +83,22 @@ class SqlBackend(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def display_progress(self: "SqlBackend", *progress_messages: str) -> None:
-        ...
+    def display_progress(self: "SqlBackend", *progress_messages: str) -> None: ...
 
     @abstractmethod
-    def execute(self: "SqlBackend", query: Query) -> None:
-        ...
+    def enable_profiling(self: "SqlBackend") -> None: ...
 
     @abstractmethod
-    def fetch_results_for(self: "SqlBackend", query: Query) -> List[Tuple]:
-        ...
+    def execute(self: "SqlBackend", query: Query) -> None: ...
 
     @abstractmethod
-    def get_status(self: "SqlBackend") -> SqlStatusDetails:
-        ...
+    def fetch_results_for(self: "SqlBackend", query: Query) -> List[Tuple]: ...
 
     @abstractmethod
-    def invalidate_completions(self: "SqlBackend") -> None:
-        ...
+    def get_status(self: "SqlBackend") -> SqlStatusDetails: ...
+
+    @abstractmethod
+    def invalidate_completions(self: "SqlBackend") -> None: ...
 
     @property
     @abstractmethod
@@ -118,18 +119,21 @@ class SqlBackend(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def make_query(self: "SqlBackend", query_str: str) -> Query:
-        ...
+    def make_query(self: "SqlBackend", query_str: str) -> Query: ...
+
+    @property
+    @abstractmethod
+    def profiling_enabled(self: "SqlBackend") -> bool: ...
 
     @abstractmethod
-    def required_packages_for_dialect(self: "SqlBackend", dialect: str) -> List[str]:
-        ...
+    def required_packages_for_dialect(
+        self: "SqlBackend", dialect: str
+    ) -> List[str]: ...
 
     @abstractmethod
     def resolve_connection_string(
         self: "SqlBackend", connection_string: str, test_connection: bool = False
-    ) -> str:
-        ...
+    ) -> str: ...
 
 
 # pylint: disable=wrong-import-position
