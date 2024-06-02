@@ -5,6 +5,7 @@ Contains the definition of the DefaultCompleter class, a context-insensitive com
 that is the default used by sqlterm when no other more specific option is available
 """
 
+import shlex
 from typing import Dict, List, Set
 
 from Levenshtein import distance
@@ -105,7 +106,9 @@ class DefaultCompleter(Completer):
                     )
                 )
             case constants.PREFIX_SQLTERM_COMMAND:
-                return self._get_completions_sqlterm_command(word_before_cursor)
+                return self._get_completions_sqlterm_command(
+                    word_before_cursor, document
+                )
             case _:
                 return self._get_completions_ansi_sql(
                     word_before_cursor
@@ -167,15 +170,39 @@ class DefaultCompleter(Completer):
         )
 
     def _get_completions_sqlterm_command(
-        self: "DefaultCompleter", word_before_cursor: str
+        self: "DefaultCompleter", word_before_cursor: str, document: Document
     ) -> List[Completion]:
-        return [
-            Completion(
-                command, start_position=-len(word_before_cursor), display_meta="command"
-            )
-            for command in available_commands
-            if command.upper().startswith(word_before_cursor)
-        ]
+        command_tokens: List[str] = shlex.split(document.text)
+        if len(command_tokens) > 0:
+            command_tokens[0] = command_tokens[0][
+                len(constants.PREFIX_SQLTERM_COMMAND) :
+            ]
+
+        if len(command_tokens) < 2:
+            return [
+                Completion(
+                    command,
+                    start_position=-len(word_before_cursor),
+                    display_meta="command",
+                )
+                for command in available_commands
+                if word_before_cursor == constants.PREFIX_SQLTERM_COMMAND
+                or command.upper().startswith(word_before_cursor)
+            ]
+
+        if command_tokens[0].lower() in available_commands:
+            return [
+                Completion(
+                    suggestion.content,
+                    start_position=suggestion.position,
+                    display_meta=suggestion.suffix,
+                )
+                for suggestion in available_commands[
+                    command_tokens[0].lower()
+                ].get_completions(word_before_cursor, document)
+            ]
+
+        return []
 
     def refresh_structure(self: "DefaultCompleter", structure: SqlStructure) -> None:
         """

@@ -92,6 +92,7 @@ class MsSqlProfiler(SqlProfiler):
                 desc=("  " * depth) + operator.element.attrib["LogicalOp"],
                 unit="rows",
                 unit_scale=True,
+                dynamic_ncols=True,
             )
             start_position += 1
             start_position = self._create_progress_bars(
@@ -204,6 +205,7 @@ class MsSqlProfiler(SqlProfiler):
 
                 records_fetched += 1
 
+            # wait a bit before querying for status again
             time.sleep(0.25)
 
         # close all progress bars

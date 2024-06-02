@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple
 
 from . import sqltermcommand
 from .. import constants
+from ..prompt.dataclasses import Suggestion
 from ..sql.exceptions import DisconnectedException, SqlQueryException
 from ..sql.generic.enums import SqlDialect
 
@@ -81,14 +82,20 @@ class CommandEdit(sqltermcommand.SqlTermCommand):
             self.parent.context.backends.prompt.get_command(object_source)
         )
 
+    @staticmethod
+    def get_completions(
+        word_before_cursor: str, command_tokens: List[str]
+    ) -> List[Suggestion]:
+        return []
+
     def _get_source(self: "CommandEdit", current_dialect: SqlDialect) -> str | None:
         if current_dialect in _queries_for_dialect:
-            object_source_results: List[
-                Tuple
-            ] = self.parent.context.backends.sql.fetch_results_for(
-                self.parent.context.backends.sql.make_query(
-                    _queries_for_dialect[current_dialect].replace(
-                        "?", self.args.object_name.replace("'", "''")
+            object_source_results: List[Tuple] = (
+                self.parent.context.backends.sql.fetch_results_for(
+                    self.parent.context.backends.sql.make_query(
+                        _queries_for_dialect[current_dialect].replace(
+                            "?", self.args.object_name.replace("'", "''")
+                        )
                     )
                 )
             )
@@ -122,11 +129,11 @@ class CommandEdit(sqltermcommand.SqlTermCommand):
             )
         ):
             try:
-                object_source_results: List[
-                    Tuple
-                ] = self.parent.context.backends.sql.fetch_results_for(
-                    self.parent.context.backends.sql.make_query(
-                        query.replace("?", self.args.object_name)
+                object_source_results: List[Tuple] = (
+                    self.parent.context.backends.sql.fetch_results_for(
+                        self.parent.context.backends.sql.make_query(
+                            query.replace("?", self.args.object_name)
+                        )
                     )
                 )
 

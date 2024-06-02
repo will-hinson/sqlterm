@@ -6,6 +6,7 @@ execution when the user types '%disconnect ...' at the command line
 """
 
 from argparse import ArgumentParser
+from typing import List
 
 from . import sqltermcommand
 from .. import constants
@@ -32,3 +33,9 @@ class CommandDisconnect(sqltermcommand.SqlTermCommand):
 
     def execute(self: "CommandDisconnect") -> None:
         self.parent.context.backends.sql.disconnect()
+
+    @staticmethod
+    def get_completions(
+        word_before_cursor: str, command_tokens: List[str]
+    ) -> List["Suggestion"]:
+        return []

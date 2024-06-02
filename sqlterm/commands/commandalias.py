@@ -6,10 +6,11 @@ execution when the user types '%alias ...' at the command line
 """
 
 from argparse import ArgumentParser
+from typing import List
 
-from .exceptions import AliasExistsException, NoAliasExistsException
 from . import sqltermcommand
 from .. import constants
+from .exceptions import AliasExistsException, NoAliasExistsException
 
 ArgumentParser.exit = sqltermcommand.SqlTermCommand.default_exit  # type: ignore
 _command_alias_arg_parser: ArgumentParser = ArgumentParser(
@@ -98,3 +99,9 @@ class CommandAlias(sqltermcommand.SqlTermCommand):
                 raise NotImplementedError(
                     f"Subcommand '%alias {self.args.subcommand}' not implemented"
                 )
+
+    @staticmethod
+    def get_completions(
+        word_before_cursor: str, command_tokens: List[str]
+    ) -> List["Suggestion"]:
+        return []

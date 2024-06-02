@@ -145,6 +145,12 @@ class SqlTermCommand(metaclass=ABCMeta):
             )
         )
 
+    @staticmethod
+    @abstractmethod
+    def get_completions(
+        word_before_cursor: str, command_tokens: List[str]
+    ) -> List["Suggestion"]: ...
+
     @property
     def parent(self: "SqlTermCommand") -> "sqlterm.SqlTerm":
         """

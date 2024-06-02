@@ -6,6 +6,7 @@ execution when the user types '%connect ...' at the command line
 """
 
 from argparse import ArgumentParser
+from typing import List
 
 from . import sqltermcommand
 from .. import constants
@@ -53,3 +54,9 @@ class CommandConnect(sqltermcommand.SqlTermCommand):
         except (KeyboardInterrupt, EOFError):
             # the user interrupted the action
             ...
+
+    @staticmethod
+    def get_completions(
+        word_before_cursor: str, command_tokens: List[str]
+    ) -> List["Suggestion"]:
+        return []
