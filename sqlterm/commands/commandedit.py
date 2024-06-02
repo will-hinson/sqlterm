@@ -28,6 +28,20 @@ _command_edit_arg_parser.add_argument(
 )
 
 _queries_for_dialect: Dict[SqlDialect, str] = {
+    SqlDialect.POSTGRES: """
+    SELECT
+        COALESCE(
+            pg_get_constraintdef(to_regclass('?')::oid),
+            pg_get_functiondef(to_regclass('?')::oid),
+            pg_get_indexdef(to_regclass('?')::oid),
+            pg_get_ruledef(to_regclass('?')::oid),
+            pg_get_triggerdef(to_regclass('?')::oid),
+            CONCAT(
+                'CREATE OR REPLACE VIEW ? AS\n',
+                pg_get_viewdef(to_regclass('?')::oid)
+            )
+        );
+    """,
     SqlDialect.SQLITE: """
         SELECT
             sql
