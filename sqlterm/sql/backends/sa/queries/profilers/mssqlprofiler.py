@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from threading import Thread
-from typing import List, Tuple
+import time
+from typing import Dict, List, Tuple
 from xml.etree import ElementTree
 
 from sqlalchemy import Connection
+from tqdm import tqdm
 
-from ..managers import QueryManager
 from .sqlprofiler import SqlProfiler
 
 
@@ -14,7 +15,6 @@ class _MsSqlProfilerQuery(StrEnum):
     NODE_STATUS = """
     SELECT
         c.[node_id],
-        c.[physical_operator_name],
         c.[row_count],
         c.[estimate_row_count],
         first_active_time = NULLIF(c.[first_active_time], 0),
@@ -55,6 +55,16 @@ class _OperatorNode:
     element: ElementTree.Element
     node_id: int
     children: List["_OperatorNode"]
+    progress_bar: tqdm | None = None
+
+
+@dataclass
+class _NodeStatus:
+    node_id: int
+    row_count: int
+    estimate_row_count: int
+    first_active_time: int
+    last_active_time: int
 
 
 class MsSqlProfiler(SqlProfiler):
@@ -68,6 +78,27 @@ class MsSqlProfiler(SqlProfiler):
         ).fetchone()[  # type: ignore
             0
         ]
+
+    def _create_progress_bars(
+        self: "MsSqlProfiler",
+        operator_tree: List[_OperatorNode],
+        depth: int = 0,
+        start_position: int = 0,
+    ) -> int:
+        for operator in operator_tree:
+            operator.progress_bar = tqdm(
+                leave=True,
+                position=start_position,
+                desc=("  " * depth) + operator.element.attrib["LogicalOp"],
+                unit="rows",
+                unit_scale=True,
+            )
+            start_position += 1
+            start_position = self._create_progress_bars(
+                operator.children, depth=depth + 1, start_position=start_position
+            )
+
+        return start_position
 
     def _get_children_operators(
         self: "MsSqlProfiler", root_element: ElementTree.Element
@@ -130,20 +161,65 @@ class MsSqlProfiler(SqlProfiler):
         if query_plan is None:
             return None
 
-        # get all of the operators as a tree structure
-        output_rel_ops: List[_OperatorNode] = []
+        # get all of the operators as a tree structure and a flattened dict
+        operator_tree: List[_OperatorNode] = []
         for rel_op in query_plan.findall(
             "{http://schemas.microsoft.com/sqlserver/2004/07/showplan}RelOp"
         ):
-            output_rel_ops.append(
+            operator_tree.append(
                 _OperatorNode(
                     rel_op,
                     node_id=int(rel_op.attrib["NodeId"]),
                     children=self._get_children_operators(rel_op),
                 )
             )
+        operator_dict: Dict[int, _OperatorNode] = self._operator_tree_to_dict(
+            operator_tree
+        )
 
-        print(output_rel_ops)
+        # populate progress bars for all of the operators
+        self._create_progress_bars(operator_tree)
+
+        # loop while we're able to get status records
+        records_fetched: int = -1
+        while records_fetched != 0:
+            records_fetched = 0
+            for node_status in (
+                _NodeStatus(*record)
+                for record in connection.execute(
+                    self.parent.make_query(
+                        _MsSqlProfilerQuery.NODE_STATUS.replace(
+                            "?", str(self.__session_id).replace("'", "''")
+                        )
+                    ).sa_text
+                ).fetchall()
+            ):
+                node_progress_bar: tqdm = operator_dict[
+                    node_status.node_id
+                ].progress_bar  # type: ignore
+                node_progress_bar.total = max(
+                    node_status.estimate_row_count, node_status.row_count
+                )
+                node_progress_bar.update(node_status.row_count - node_progress_bar.n)
+
+                records_fetched += 1
+
+            time.sleep(0.25)
+
+        # close all progress bars
+        for operator_node in operator_dict.values():
+            if operator_node.progress_bar is not None:
+                operator_node.progress_bar.close()
+
+    def _operator_tree_to_dict(
+        self: "MsSqlProfiler", operator_tree: List[_OperatorNode]
+    ) -> Dict[int, _OperatorNode]:
+        operator_dict: Dict[int, _OperatorNode] = {}
+        for operator_node in operator_tree:
+            operator_dict[operator_node.node_id] = operator_node
+            operator_dict.update(self._operator_tree_to_dict(operator_node.children))
+
+        return operator_dict
 
     def profile_query(self: "MsSqlProfiler") -> None:
         self.current_thread = Thread(target=self._run)
