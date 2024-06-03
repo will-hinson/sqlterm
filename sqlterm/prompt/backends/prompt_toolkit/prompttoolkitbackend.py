@@ -648,7 +648,10 @@ class PromptToolkitBackend(PromptBackend):
             current_buffer: Buffer = event.current_buffer
 
             # first, check if the user is pressing tab on an active completion
-            if current_buffer.complete_state is not None:
+            if (
+                current_buffer.complete_state is not None
+                and len(current_buffer.complete_state.completions) > 0
+            ):
                 current_buffer.apply_completion(
                     current_buffer.complete_state.current_completion  # type: ignore
                 )
