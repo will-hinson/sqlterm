@@ -102,6 +102,19 @@ class CommandAlias(sqltermcommand.SqlTermCommand):
 
     @staticmethod
     def get_completions(
-        word_before_cursor: str, command_tokens: List[str]
+        parent, word_before_cursor: str, command_tokens: List[str]
     ) -> List["Suggestion"]:
+        from ..prompt.dataclasses import Suggestion
+
+        if len(command_tokens) < 3:
+            return [
+                Suggestion(
+                    choice,
+                    position=-len(word_before_cursor),
+                    suffix="subcommand",
+                )
+                for choice in _sub_parsers.choices
+                if choice.lower().startswith(word_before_cursor.lower())
+            ]
+
         return []

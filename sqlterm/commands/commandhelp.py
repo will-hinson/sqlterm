@@ -65,7 +65,7 @@ class CommandHelp(sqltermcommand.SqlTermCommand):
 
     @staticmethod
     def get_completions(
-        word_before_cursor: str, command_tokens: List[str]
+        parent, word_before_cursor: str, command_tokens: List[str]
     ) -> List[Suggestion]:
         return []
 

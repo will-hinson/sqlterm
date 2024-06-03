@@ -57,6 +57,18 @@ class CommandConnect(sqltermcommand.SqlTermCommand):
 
     @staticmethod
     def get_completions(
-        word_before_cursor: str, command_tokens: List[str]
+        parent, word_before_cursor: str, command_tokens: List[str]
     ) -> List["Suggestion"]:
+        from ..prompt.dataclasses import Suggestion
+
+        if len(command_tokens) < 3:
+            return [
+                Suggestion(
+                    alias_name, position=-len(word_before_cursor), suffix="alias"
+                )
+                for alias_name in parent.context.config.aliases
+                if len(word_before_cursor) == 0
+                or alias_name.lower().startswith(word_before_cursor.lower())
+            ]
+
         return []

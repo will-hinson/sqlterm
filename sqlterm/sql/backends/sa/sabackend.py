@@ -75,6 +75,7 @@ class SaBackend(SqlBackend):
 
         self.__dialect = None
         self._update_prompt_dialect()
+        self.disable_profiling()
 
     def _connect_with_string(self: "SaBackend", connection_string: str) -> None:
         # check if a connection already exists

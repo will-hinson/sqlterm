@@ -5,7 +5,7 @@ Contains the definition of the DefaultCompleter class, a context-insensitive com
 that is the default used by sqlterm when no other more specific option is available
 """
 
-import shlex
+import re
 from typing import Dict, List, Set
 
 from Levenshtein import distance
@@ -49,13 +49,15 @@ class DefaultCompleter(Completer):
     inspector_structure: SqlStructure | None
     inspector_structure_flattened: Set[SqlObject] | None
 
+    _parent: "PromptToolkitBackend"
     _system_completer: SystemCompleter
 
-    def __init__(self: "DefaultCompleter") -> None:
+    def __init__(self: "DefaultCompleter", parent: "PromptToolkitBackend") -> None:
         super().__init__()
 
         self.inspector_structure = None
         self.inspector_structure_flattened = None
+        self._parent = parent
         self._system_completer = SystemCompleter()
 
     def clear_completions(self: "DefaultCompleter") -> None:
@@ -79,7 +81,7 @@ class DefaultCompleter(Completer):
         self: "DefaultCompleter", document: Document, complete_event: CompleteEvent
     ) -> List[Completion]:
         word_before_cursor = document.get_word_before_cursor().upper()
-        if len(word_before_cursor) == 0:
+        if len(word_before_cursor) == 0 and not complete_event.completion_requested:
             return []
 
         completions: List[Completion] = self._get_completions_unsorted(
@@ -107,7 +109,7 @@ class DefaultCompleter(Completer):
                 )
             case constants.PREFIX_SQLTERM_COMMAND:
                 return self._get_completions_sqlterm_command(
-                    word_before_cursor, document
+                    word_before_cursor, document, complete_event
                 )
             case _:
                 return self._get_completions_ansi_sql(
@@ -170,15 +172,28 @@ class DefaultCompleter(Completer):
         )
 
     def _get_completions_sqlterm_command(
-        self: "DefaultCompleter", word_before_cursor: str, document: Document
+        self: "DefaultCompleter",
+        word_before_cursor: str,
+        document: Document,
+        complete_event: CompleteEvent,
     ) -> List[Completion]:
-        command_tokens: List[str] = shlex.split(document.text)
+        partial_shell_split_pattern: str = r'"([^"]*)"|"(.*)|(\S+)'
+
+        command_tokens: List[str] = [
+            quote1 if quote1 else (quote2 if quote2 else word)
+            for quote1, quote2, word in re.findall(
+                partial_shell_split_pattern, document.text
+            )
+        ]
         if len(command_tokens) > 0:
             command_tokens[0] = command_tokens[0][
                 len(constants.PREFIX_SQLTERM_COMMAND) :
             ]
 
-        if len(command_tokens) < 2:
+            if not complete_event.completion_requested:
+                word_before_cursor = command_tokens[-1]
+
+        if len(command_tokens) < 2 and not complete_event.completion_requested:
             return [
                 Completion(
                     command,
@@ -187,7 +202,7 @@ class DefaultCompleter(Completer):
                 )
                 for command in available_commands
                 if word_before_cursor == constants.PREFIX_SQLTERM_COMMAND
-                or command.upper().startswith(word_before_cursor)
+                or command.upper().startswith(word_before_cursor.upper())
             ]
 
         if command_tokens[0].lower() in available_commands:
@@ -199,7 +214,9 @@ class DefaultCompleter(Completer):
                 )
                 for suggestion in available_commands[
                     command_tokens[0].lower()
-                ].get_completions(word_before_cursor, document)
+                ].get_completions(
+                    self._parent.parent, word_before_cursor, command_tokens
+                )
             ]
 
         return []
