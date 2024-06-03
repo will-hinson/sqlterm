@@ -29,6 +29,7 @@ from .enums.sadialect import (
 )
 from ...generic import RecordSet
 from ...generic.enums import SqlDialect
+from .queries.profilers import SqlProfiler, profiler_for_dialect
 from ....prompt.dataclasses import SqlStatusDetails
 from .queries.inspectors import (
     DefaultInspector,
@@ -48,6 +49,7 @@ class SaBackend(SqlBackend):
     __dialect: SaDialect | None = None
     __engine: Engine | None = None
     __inspector: SqlInspector | None = None
+    __profiler: SqlProfiler | None = None
 
     def connect(self: "SaBackend", connection_string: str) -> None:
         self._connect_with_string(connection_string)
@@ -55,6 +57,10 @@ class SaBackend(SqlBackend):
     @property
     def connected(self: "SaBackend") -> bool:
         return self.__active_connection is not None
+
+    def disable_profiling(self: "SaBackend") -> None:
+        if self.__profiler is not None:
+            self.__profiler = None
 
     def disconnect(self: "SaBackend") -> None:
         self.parent.context.backends.prompt.clear_completions()
@@ -69,6 +75,7 @@ class SaBackend(SqlBackend):
 
         self.__dialect = None
         self._update_prompt_dialect()
+        self.disable_profiling()
 
     def _connect_with_string(self: "SaBackend", connection_string: str) -> None:
         # check if a connection already exists
@@ -137,6 +144,18 @@ class SaBackend(SqlBackend):
 
     def display_progress(self: "SaBackend", *progress_messages) -> None:
         self.parent.context.backends.prompt.display_progress(*progress_messages)
+
+    def enable_profiling(self: "SaBackend") -> None:
+        if self.__active_connection is None:
+            raise DisconnectedException("No SQL connection is currently established")
+
+        if self.__profiler is None:
+            if self.dialect not in profiler_for_dialect:
+                raise NotImplementedError(
+                    f"No profiler implemented for current dialect {self.dialect}"
+                )
+
+            self.__profiler = profiler_for_dialect[self.dialect](parent=self)
 
     @property
     def engine(self: "SaBackend") -> Engine:
@@ -239,8 +258,7 @@ class SaBackend(SqlBackend):
 
         # patch the _autobegin() method with one that doesn't start a transaction
         # and set up autocommit on the underlying connection object if we can
-        def _no_autobegin(*_, **__) -> None:
-            ...
+        def _no_autobegin(*_, **__) -> None: ...
 
         Connection._autobegin = _no_autobegin
 
@@ -268,6 +286,10 @@ class SaBackend(SqlBackend):
 
     def make_query(self: "SaBackend", query_str: str) -> SaQuery:
         return SaQuery(query_str)
+
+    @property
+    def profiling_enabled(self: "SaBackend") -> bool:
+        return self.__profiler is not None
 
     def required_packages_for_dialect(self: "SaBackend", dialect: str) -> List[str]:
         match dialect:
@@ -340,10 +362,17 @@ class SaBackend(SqlBackend):
         record_sets: List[RecordSet] = []
 
         while query_manager.has_another_record_set:
+            # start profiling this part of the query as necessary
+            if self.__profiler is not None:
+                self.__profiler.profile_query()
+
             spool: List[Tuple] = []
 
-            # start a spool monitor to output progress updates
-            monitor: SaSpoolMonitor = SaSpoolMonitor(spool=spool, parent=self)
+            # start a spool monitor to output progress updates. display spooling updates
+            # if query profiling isn't currently enabled
+            monitor: SaSpoolMonitor = SaSpoolMonitor(
+                spool=spool, parent=self, display_progress=self.__profiler is None
+            )
             monitor.start()
 
             # spool all of the streaming records from the connection

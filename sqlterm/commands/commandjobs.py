@@ -13,6 +13,7 @@ from . import sqltermcommand
 from .. import constants
 from .dataclasses import JobLastRunDetails, JobStatusRecord, JobStep
 from .exceptions import UnknownJobException
+from ..prompt.dataclasses import Suggestion
 from ..sql.exceptions import DisconnectedException
 from ..sql.generic import RecordSet
 from ..sql.generic.enums import SqlDialect
@@ -384,6 +385,12 @@ class CommandJobs(sqltermcommand.SqlTermCommand):
                 )
             )
         ]
+
+    @staticmethod
+    def get_completions(
+        parent, word_before_cursor: str, command_tokens: List[str]
+    ) -> List[Suggestion]:
+        return []
 
     def _job_detail(self: "CommandJobs", query_set: _JobQuerySet) -> None:
         job_name: str = self.args.job_name

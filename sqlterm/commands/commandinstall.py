@@ -12,6 +12,7 @@ from typing import List
 
 from . import sqltermcommand
 from .. import constants
+from ..prompt.dataclasses import Suggestion
 
 ArgumentParser.exit = sqltermcommand.SqlTermCommand.default_exit  # type: ignore
 _command_install_arg_parser: ArgumentParser = ArgumentParser(
@@ -42,10 +43,10 @@ class CommandInstall(sqltermcommand.SqlTermCommand):
         return _command_install_arg_parser
 
     def execute(self: "CommandInstall") -> None:
-        required_packages: List[
-            str
-        ] = self.parent.context.backends.sql.required_packages_for_dialect(
-            self.args.dialect_string
+        required_packages: List[str] = (
+            self.parent.context.backends.sql.required_packages_for_dialect(
+                self.args.dialect_string
+            )
         )
         print(
             f"Detected {len(required_packages)} required package"
@@ -55,6 +56,12 @@ class CommandInstall(sqltermcommand.SqlTermCommand):
         for package in required_packages:
             print(f"Installing target {package}")
             self._install_package(target_package=package)
+
+    @staticmethod
+    def get_completions(
+        parent, word_before_cursor: str, command_tokens: List[str]
+    ) -> List[Suggestion]:
+        return []
 
     def _install_package(self: "CommandInstall", target_package: str) -> None:
         subprocess.check_call([sys.executable, "-m", "pip", "install", target_package])

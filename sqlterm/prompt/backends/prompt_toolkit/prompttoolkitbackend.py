@@ -1,10 +1,10 @@
 import functools
+import os
 import shutil
 import time
 import traceback
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Type
 
-import os
 from prompt_toolkit import (
     print_formatted_text,
     prompt,
@@ -117,7 +117,7 @@ class PromptToolkitBackend(PromptBackend):
     ) -> None:
         super().__init__(config=config)
 
-        self.__completer = DefaultCompleter()
+        self.__completer = DefaultCompleter(parent=self)
         self.__lexer = self._default_lexer
 
         self.__session = PromptSession(
@@ -141,6 +141,10 @@ class PromptToolkitBackend(PromptBackend):
         )
         self.__current_statement_index = 0
         shortcuts.clear()
+
+        self.__session.default_buffer.on_completions_changed.add_handler(
+            PromptToolkitBackend._select_first_completion
+        )
 
     def add_style(self: "PromptBackend", name: str, style_class: Type) -> None:
         sqlterm_styles[name] = style_class
@@ -364,9 +368,17 @@ class PromptToolkitBackend(PromptBackend):
             except Exception as exc:
                 self.display_exception(exc, unhandled=True)
 
-        # NOTE: disable the default i-search
         @bindings.add(Keys.ControlS)
-        def binding_ctrl_s(_: KeyPressEvent) -> None: ...
+        def binding_ctrl_s(_: KeyPressEvent) -> None:
+            try:
+                if not self.parent.context.backends.sql.profiling_enabled:
+                    self.parent.context.backends.sql.enable_profiling()
+                    self.parent.print_info("Query profiling enabled.")
+                else:
+                    self.parent.context.backends.sql.disable_profiling()
+                    self.parent.print_info("Query profiling disabled.")
+            except (DisconnectedException, NotImplementedError) as exc:
+                self.display_exception(exc, unhandled=False)
 
         @bindings.add(Keys.ControlY, save_before=lambda _: False)
         def binding_ctrl_y(event: KeyPressEvent) -> None:
@@ -633,12 +645,30 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add(Keys.Tab)
         def binding_tab(event: KeyPressEvent) -> None:
+            current_buffer: Buffer = event.current_buffer
+
+            # first, check if the user is pressing tab on an active completion
+            if current_buffer.complete_state is not None:
+                current_buffer.apply_completion(
+                    current_buffer.complete_state.current_completion  # type: ignore
+                )
+                return
+
+            # check if this is a shell or sqlterm command
+            current_text_stripped: str = current_buffer.text.strip()
+            if len(current_text_stripped) == 0 or current_text_stripped[:1] in (
+                constants.PREFIX_SHELL_COMMAND,
+                constants.PREFIX_SQLTERM_COMMAND,
+            ):
+                current_buffer.start_completion()
+                return
+
             # check if there is a multiline selection and indent all lines if so
             if (
-                event.app.current_buffer.selection_state is not None
+                current_buffer.selection_state is not None
                 and len(target_lines := selected_lines(event)) > 1
             ):
-                event.current_buffer.text = event.current_buffer.transform_lines(
+                current_buffer.text = current_buffer.transform_lines(
                     target_lines,
                     lambda line: (
                         " "
@@ -654,24 +684,24 @@ class PromptToolkitBackend(PromptBackend):
                 )
 
                 # select all of the lines we indented
-                event.app.current_buffer.cursor_position = 0
+                current_buffer.cursor_position = 0
                 if target_lines[0] > 0:
-                    event.app.current_buffer.cursor_down(target_lines[0])
-                event.app.current_buffer.start_selection()
-                event.app.current_buffer.cursor_down(target_lines[-1] - target_lines[0])
-                event.app.current_buffer.cursor_right(
-                    len(event.current_buffer.document.lines[target_lines[-1]])
+                    current_buffer.cursor_down(target_lines[0])
+                current_buffer.start_selection()
+                current_buffer.cursor_down(target_lines[-1] - target_lines[0])
+                current_buffer.cursor_right(
+                    len(current_buffer.document.lines[target_lines[-1]])
                 )
 
                 return
 
             # map tab to four spaces
-            event.app.current_buffer.insert_text(
+            current_buffer.insert_text(
                 " "
                 * (
                     constants.SPACES_IN_TAB
                     - (
-                        event.app.current_buffer.document.cursor_position_col
+                        current_buffer.document.cursor_position_col
                         % constants.SPACES_IN_TAB
                     )
                 )
@@ -1056,6 +1086,11 @@ class PromptToolkitBackend(PromptBackend):
                 style_from_pygments_cls(self._get_style_for_config()),
             ]
         )
+
+    @staticmethod
+    def _select_first_completion(caller: Buffer) -> None:
+        if caller.complete_state is not None:
+            caller.complete_state.go_to_index(0)
 
     @property
     def session(self: "PromptToolkitBackend") -> PromptSession:

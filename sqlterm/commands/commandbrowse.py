@@ -6,6 +6,7 @@ execution when the user types '%browse ...' at the command line
 """
 
 from argparse import ArgumentParser
+from typing import List
 
 from . import sqltermcommand
 from .. import constants
@@ -32,3 +33,9 @@ class CommandBrowse(sqltermcommand.SqlTermCommand):
 
     def execute(self: "CommandBrowse") -> None:
         self.parent.context.backends.prompt.display_object_browser(show_loading=True)
+
+    @staticmethod
+    def get_completions(
+        parent, word_before_cursor: str, command_tokens: List[str]
+    ) -> List["Suggestion"]:
+        return []

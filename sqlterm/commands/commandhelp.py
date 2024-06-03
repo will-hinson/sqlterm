@@ -11,6 +11,7 @@ from typing import List
 
 from .. import constants
 from . import sqltermcommand
+from ..prompt.dataclasses import Suggestion
 
 ArgumentParser.exit = sqltermcommand.SqlTermCommand.default_exit  # type: ignore
 _command_help_arg_parser: ArgumentParser = ArgumentParser(
@@ -61,6 +62,12 @@ class CommandHelp(sqltermcommand.SqlTermCommand):
                 )
         else:
             self._show_help_for_command(self.args.command_name)
+
+    @staticmethod
+    def get_completions(
+        parent, word_before_cursor: str, command_tokens: List[str]
+    ) -> List[Suggestion]:
+        return []
 
     def _show_help_for_command(self: "CommandHelp", command_name: str) -> None:
         # pylint: disable=protected-access

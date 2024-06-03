@@ -7,9 +7,11 @@ execution when the user types '%exit ...' at the command line
 
 from argparse import ArgumentParser
 import sys
+from typing import List
 
 from . import sqltermcommand
 from .. import constants
+from ..prompt.dataclasses import Suggestion
 
 ArgumentParser.exit = sqltermcommand.SqlTermCommand.default_exit  # type: ignore
 _command_exit_arg_parser: ArgumentParser = ArgumentParser(
@@ -33,3 +35,9 @@ class CommandExit(sqltermcommand.SqlTermCommand):
 
     def execute(self: "CommandExit") -> None:
         sys.exit(0)
+
+    @staticmethod
+    def get_completions(
+        parent, word_before_cursor: str, command_tokens: List[str]
+    ) -> List[Suggestion]:
+        return []
