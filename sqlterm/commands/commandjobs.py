@@ -249,7 +249,9 @@ _queries_for_dialect: Dict[SqlDialect, _JobQuerySet] = {
             GROUP BY
                 [job_id]
         ) AS f ON
-            a.[job_id] = f.[job_id];
+            a.[job_id] = f.[job_id]
+        ORDER BY
+            a.[name] ASC;
         """,
         start_job_by_id="""
         EXEC msdb.dbo.sp_start_job
