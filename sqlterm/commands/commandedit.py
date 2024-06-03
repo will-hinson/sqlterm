@@ -6,6 +6,7 @@ execution when the user types '%edit ...' at the command line
 """
 
 from argparse import ArgumentParser
+import re
 from typing import Dict, List, Tuple
 
 from . import sqltermcommand
@@ -122,6 +123,8 @@ class CommandEdit(sqltermcommand.SqlTermCommand):
         match current_dialect:
             case SqlDialect.MYSQL:
                 return self._get_source_mysql()
+            case SqlDialect.ORACLE:
+                return self._get_source_oracle()
             case _:
                 raise NotImplementedError(
                     f"%edit command not implemented for current SQL dialect '{current_dialect}'"
@@ -161,4 +164,114 @@ class CommandEdit(sqltermcommand.SqlTermCommand):
                 ...
 
         # if we failed to find the source for the object, return None
+        return None
+
+    def _get_source_oracle(self: "CommandEdit") -> str | None:
+        schema_name: str | None = None
+        object_name: str
+        full_name: str = self.args.object_name
+
+        # Check if the fullname contains a dot indicating a schema and object name
+        if "." in full_name:
+            # Handle quoted identifiers
+            if re.match(r'^".*"\.".*"$', full_name):
+                schema_name = re.match(r'^"([^"]+)"', full_name).group(1)
+                object_name = re.search(r'\."([^"]+)"$', full_name).group(1)
+            else:
+                # Handle unquoted identifiers
+                schema_name, object_name = full_name.split(".")
+        else:
+            # If no schema was provided, only parse out the object name
+            object_name = re.search(r'\."([^"]+)"$', full_name).group(1)
+
+        object_source_results: List[Tuple] = (
+            self.parent.context.backends.sql.fetch_results_for(
+                self.parent.context.backends.sql.make_query(
+                    """
+                    WITH cteSourceText (TEXT) AS (
+                        SELECT
+                            TEXT
+                        FROM
+                            ALL_SOURCE
+                        WHERE
+                            OWNER = 'schema?'
+                            AND NAME = 'object_name?'
+                        ORDER BY
+                            LINE ASC
+                    )
+                    SELECT
+                        TEXT
+                    FROM
+                        cteSourceText
+                    
+                    UNION ALL
+
+                    SELECT
+                        CONCAT(
+                            'CREATE OR REPLACE VIEW full_name? AS\n',
+                            TEXT_VC
+                        )
+                    FROM
+                        ALL_VIEWS
+                    WHERE
+                        OWNER = 'schema?'
+                        AND VIEW_NAME = 'object_name?'
+                    """.replace(
+                        "schema?", schema_name.replace("'", "''").upper()
+                    )
+                    .replace("object_name?", object_name.replace("'", "''").upper())
+                    .replace(
+                        "full_name?",
+                        '"'
+                        + schema_name.replace('"', '""')
+                        + '"."'
+                        + object_name.replace('"', '""')
+                        + '"',
+                    )
+                    if schema_name is not None
+                    else """
+                    WITH cteSourceText (TEXT) AS (
+                        SELECT
+                            TEXT
+                        FROM
+                            ALL_SOURCE
+                        WHERE
+                            NAME = 'object_name?'
+                        ORDER BY
+                            LINE ASC
+                    )
+                    SELECT
+                        TEXT
+                    FROM
+                        cteSourceText
+                    
+                    UNION ALL
+
+                    SELECT
+                        CONCAT(
+                            'CREATE OR REPLACE full_name? AS\n',
+                            TEXT_VC
+                        )
+                    FROM
+                        ALL_VIEWS
+                    WHERE
+                        VIEW_NAME = 'object_name?'
+                    """.replace(
+                        "object_name?", object_name.replace("'", "''").upper()
+                    ).replace(
+                        "full_name?",
+                        '"' + object_name.replace('"', '""') + '"',
+                    )
+                )
+            )
+        )
+
+        # reconstruct the source from the results of the query
+        source: str = "".join(record[0] for record in object_source_results)
+
+        # if the source wasn't blank/only whitespace, return it
+        if len(source.strip()) > 0:
+            return source
+
+        # otherwise, we didn't get any valid source
         return None
