@@ -61,6 +61,8 @@ class CommandConnect(sqltermcommand.SqlTermCommand):
     ) -> List["Suggestion"]:
         from ..prompt.dataclasses import Suggestion
 
+        word_before_cursor = word_before_cursor.lower()
+
         if len(command_tokens) < 3:
             return [
                 Suggestion(
@@ -68,7 +70,8 @@ class CommandConnect(sqltermcommand.SqlTermCommand):
                 )
                 for alias_name in parent.context.config.aliases
                 if len(word_before_cursor) == 0
-                or alias_name.lower().startswith(word_before_cursor.lower())
+                or alias_name.lower().startswith(word_before_cursor)
+                or word_before_cursor in alias_name.lower()
             ]
 
         return []
