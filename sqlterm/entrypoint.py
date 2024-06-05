@@ -29,7 +29,6 @@ def main() -> int:
     session: SqlTerm = SqlTerm(
         sql_backend=SaBackend,
         prompt_backend=PromptToolkitBackend,
-        table_backend=TerminalTablesBackend,
         config_path=SqlTermConfig.default_path(),
     )
     session.repl()

@@ -15,7 +15,8 @@ from .prompt.exceptions import UserExit
 from .sql.abstract import Query, SqlBackend
 from .sql.exceptions import SqlException
 from .sqltermexception import SqlTermException
-from .tables.abstract import TableBackend
+from .tables.backends import table_backends_by_name
+from .tables.backends.terminaltables import TerminalTablesBackend
 
 
 class SqlTerm:
@@ -25,7 +26,6 @@ class SqlTerm:
         self: "SqlTerm",
         sql_backend: Type[SqlBackend],
         prompt_backend: Type[PromptBackend],
-        table_backend: Type[TableBackend],
         config_path: str,
     ) -> None:
         # try reading a config instance from the provided config file. otherwise, construct
@@ -38,7 +38,11 @@ class SqlTerm:
             backends=BackendSet(
                 prompt=prompt_backend(config),
                 sql=sql_backend(),
-                table=table_backend(),
+                table=(
+                    table_backends_by_name[config.table_backend]
+                    if config.table_backend in table_backends_by_name
+                    else TerminalTablesBackend
+                )(),
             ),
             config_path=config_path,
             config=config,
@@ -226,3 +230,12 @@ class SqlTerm:
         self.context.backends.prompt.display_message_sql(
             f"Removed alias '{alias_name}'"
         )
+
+    def reset_table_backend(self: "SqlTerm") -> None:
+        self.context.backends.table = (
+            table_backends_by_name[self.context.config.table_backend]
+            if self.context.config.table_backend in table_backends_by_name
+            else TerminalTablesBackend
+        )()
+        self.context.backends.sql.table_backend = self.context.backends.table
+        self._flush_config()

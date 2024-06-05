@@ -15,6 +15,7 @@ import platformdirs
 
 from .. import constants
 from .alias import Alias
+from .tablebackendtype import TableBackendType
 
 
 _config_upgrade_order: List[
@@ -35,6 +36,7 @@ class SqlTermConfig:
     aliases: Dict[str, Alias]
     color_scheme: str
     autoformat: bool
+    table_backend: TableBackendType
 
     @staticmethod
     def cannot_upgrade(from_config: "SqlTermConfig", to_version: str) -> NoReturn:

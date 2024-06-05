@@ -7,3 +7,4 @@ sqlterm sessions.
 
 from .alias import Alias
 from .sqltermconfig import SqlTermConfig
+from .tablebackendtype import TableBackendType
