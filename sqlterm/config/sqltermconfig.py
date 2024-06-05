@@ -35,6 +35,7 @@ class SqlTermConfig:
     aliases: Dict[str, Alias]
     color_scheme: str
     autoformat: bool
+    table_backend: str
 
     @staticmethod
     def cannot_upgrade(from_config: "SqlTermConfig", to_version: str) -> NoReturn:

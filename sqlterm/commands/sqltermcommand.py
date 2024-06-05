@@ -180,6 +180,7 @@ from .commandexit import CommandExit
 from .commandhelp import CommandHelp
 from .commandinstall import CommandInstall
 from .commandjobs import CommandJobs
+from .commandset import CommandSet
 
 available_commands: Dict[str, Type[SqlTermCommand]] = {
     "alias": CommandAlias,
@@ -191,6 +192,7 @@ available_commands: Dict[str, Type[SqlTermCommand]] = {
     "help": CommandHelp,
     "install": CommandInstall,
     "jobs": CommandJobs,
+    "set": CommandSet,
     # these are aliases for the above commands
     "job": CommandJobs,
     "quit": CommandExit,
