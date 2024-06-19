@@ -744,6 +744,9 @@ class PromptToolkitBackend(PromptBackend):
 
         @bindings.add(Keys.F5)
         def binding_f5(event: KeyPressEvent) -> None:
+            event.current_buffer.document = format_sql_document(
+                event.current_buffer.document
+            )
             event.current_buffer.validate_and_handle()
 
         @bindings.add(Keys.ControlT)
