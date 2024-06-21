@@ -168,6 +168,7 @@ class SqlTermConfig:
             aliases={},
             color_scheme="dracula",
             autoformat=False,
+            table_backend=TableBackendType.TERMINAL_TABLES,
         )
 
     def to_file(self: "SqlTermConfig", output_path: str) -> None:

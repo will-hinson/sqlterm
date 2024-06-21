@@ -237,7 +237,8 @@ _queries_for_dialect: Dict[SqlDialect, _JobQuerySet] = {
             FROM
                 msdb.dbo.sysjobactivity
             WHERE
-                [stop_execution_date] IS NULL
+                [start_execution_date] IS NOT NULL
+                AND [stop_execution_date] IS NULL
         ) AS e ON
             a.[job_id] = e.[job_id]
         LEFT JOIN (

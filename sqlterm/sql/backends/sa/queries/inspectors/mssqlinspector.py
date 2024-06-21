@@ -3,6 +3,7 @@ from typing import Dict, Set, Tuple
 from pygments.lexers.sql import TransactSqlLexer
 from pygments.token import Token
 from sqlalchemy import Connection
+from sqlalchemy.exc import ProgrammingError
 
 from ...enums.sadialect import generic_dialect_map
 from .....generic.dataclasses import SqlObject, SqlStructure
@@ -339,12 +340,13 @@ class MsSqlInspector(SqlInspector):
     def _get_database_objects(
         self: "MsSqlInspector", database_name: str, connection: Connection
     ) -> Set[Tuple[int, str, str, str]]:
-        return set(
-            map(
-                tuple,
-                connection.execute(
-                    self.parent.make_query(
-                        """
+        try:
+            return set(
+                map(
+                    tuple,
+                    connection.execute(
+                        self.parent.make_query(
+                            """
                         SELECT
                             a.[object_id],
                             schema_name = b.[name],
@@ -370,12 +372,18 @@ class MsSqlInspector(SqlInspector):
                                 'VIEW'
                             );
                         """.replace(
-                            "?", database_name.replace('"', '""')
-                        )
-                    ).sa_text
-                ).fetchall(),
+                                "?", database_name.replace('"', '""')
+                            )
+                        ).sa_text
+                    ).fetchall(),
+                )
             )
-        )
+        except ProgrammingError as pe:
+            # if we couldn't read objects for this database, fail silently
+            if "42000" in pe.args[0]:
+                return set()
+
+            raise
 
     def _map_database(
         self: "MsSqlInspector", database_name: str, connection: Connection
