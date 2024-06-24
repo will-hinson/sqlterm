@@ -452,7 +452,7 @@ class SaBackend(SqlBackend):
 
                 # prompt the user with the prompt model and construct a url from it
                 user_url: URL = dialect_prompt_model.url_factory(
-                    [f"{connection_string}://"]
+                    [f"{connection_string}"]
                     + self.parent.context.backends.prompt.prompt_for(
                         dialect_prompt_model.input_models
                     )
