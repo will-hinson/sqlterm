@@ -182,7 +182,11 @@ class MsSqlManager(QueryManager):
         self.__cursor.messages.clear()
 
     def _remove_message_prefix(self: "MsSqlManager", message: str) -> str:
-        while message.startswith("["):
+        # there are three prefixes to remove from an odbc message
+        for _ in range(3):
+            if "]" not in message:
+                break
+
             message = message[message.index("]") + 1 :]
 
         return message
