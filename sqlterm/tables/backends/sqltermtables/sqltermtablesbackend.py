@@ -66,24 +66,26 @@ class SqlTermTablesBackend(TableBackend):
 
         return table_data
 
-    def _render_top_border(
+    def _render_bottom_border(
         self: "SqlTermTablesBackend",
         total_records: int,
         max_line_length: int,
-        column_line_mappings: List[ColumnSpec],
+        column_mappings_by_line: Dict[int, Tuple[ColumnSpec, DataColumn]],
         table_data: List[DataColumn],
     ) -> str:
-        table_render: str = "╭"
-        table_render += "─" * (len(f"{total_records + 1}") + 2)
-        for column_mapping, data_column in zip(column_line_mappings, table_data):
-            if column_mapping.line_offset > 0:
-                table_render += "─" * (max_line_length - len(table_render))
-                break
+        table_render: str = "\n"
+        current_line_data = "╰"
+        current_line_data += "─" * (len(f"{total_records + 1}") + 2)
+        last_line_mappings: List[ColumnSpec] = [
+            column_mapping for column_mapping, _ in column_mappings_by_line[-1]
+        ]
+        for data_column in table_data[-len(last_line_mappings) :]:
+            current_line_data += "┴"
+            current_line_data += "─" * (data_column.max_length + 2)
 
-            table_render += "┬"
-            table_render += "─" * (data_column.max_length + 2)
+        current_line_data += "─" * (max_line_length - len(current_line_data))
+        table_render += current_line_data + "╯"
 
-        table_render += "╮"
         return table_render
 
     def _render_separator(
@@ -152,6 +154,26 @@ class SqlTermTablesBackend(TableBackend):
             + "┤"
         )
         return separator_render
+
+    def _render_top_border(
+        self: "SqlTermTablesBackend",
+        total_records: int,
+        max_line_length: int,
+        column_line_mappings: List[ColumnSpec],
+        table_data: List[DataColumn],
+    ) -> str:
+        table_render: str = "╭"
+        table_render += "─" * (len(f"{total_records + 1}") + 2)
+        for column_mapping, data_column in zip(column_line_mappings, table_data):
+            if column_mapping.line_offset > 0:
+                table_render += "─" * (max_line_length - len(table_render))
+                break
+
+            table_render += "┬"
+            table_render += "─" * (data_column.max_length + 2)
+
+        table_render += "╮"
+        return table_render
 
     def _split_column_values(
         self: "SqlTermTablesBackend", data_column: DataColumn, max_allowed_length: int
@@ -226,6 +248,7 @@ class SqlTermTablesBackend(TableBackend):
         # now, add in each row of columns
         current_line_data: str = ""
         current_line_number: int = -1
+        columns_are_multiline: bool = False
         for column_mapping, data_column in zip(column_line_mappings, table_data):
             if column_mapping.line_offset != current_line_number:
                 # only run against the first actual line. this allows the new line code below to run
@@ -243,6 +266,7 @@ class SqlTermTablesBackend(TableBackend):
                         include_index_column=False,
                         dashed=True,
                     )
+                    columns_are_multiline = True
 
                 current_line_number += 1
                 current_line_data = ""
@@ -330,7 +354,7 @@ class SqlTermTablesBackend(TableBackend):
 
                 current_line_number += 1
 
-            if index < total_records - 1:
+            if columns_are_multiline and index < total_records - 1:
                 table_render += self._render_separator(
                     total_records,
                     max_line_length,
@@ -341,20 +365,9 @@ class SqlTermTablesBackend(TableBackend):
                 )
 
         # add the footer line
-        table_render += "\n"
-        current_line_data = "╰"
-        current_line_data += "─" * (len(f"{total_records + 1}") + 2)
-        last_line_mappings: List[ColumnSpec] = [
-            column_mapping for column_mapping, _ in column_mappings_by_line[-1]
-        ]
-        for column_mapping, data_column in zip(
-            last_line_mappings, table_data[-len(last_line_mappings) :]
-        ):
-            current_line_data += "┴"
-            current_line_data += "─" * (data_column.max_length + 2)
-
-        current_line_data += "─" * (max_line_length - len(current_line_data))
-        table_render += current_line_data + "╯"
+        table_render += self._render_bottom_border(
+            total_records, max_line_length, column_mappings_by_line, table_data
+        )
 
         # SELECT TOP 2 * FROM INFORMATION_SCHEMA.TABLES;
         """
