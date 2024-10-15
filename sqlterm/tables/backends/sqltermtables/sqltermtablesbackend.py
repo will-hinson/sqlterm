@@ -79,8 +79,8 @@ class SqlTermTablesBackend(TableBackend):
         last_line_mappings: List[ColumnSpec] = [
             column_mapping for column_mapping, _ in column_mappings_by_line[-1]
         ]
-        for data_column in table_data[-len(last_line_mappings) :]:
-            current_line_data += "┴"
+        for n, data_column in enumerate(table_data[-len(last_line_mappings) :]):
+            current_line_data += "┴" if n == 0 or total_records > 0 else "─"
             current_line_data += "─" * (data_column.max_length + 2)
 
         current_line_data += "─" * (max_line_length - len(current_line_data))
@@ -119,28 +119,29 @@ class SqlTermTablesBackend(TableBackend):
             max_line_length
             - len("│" + (" " * (len(f"{record_set_size + 1}") + 2)) + "├")
         )
-        col_offset: int = -1
-        for (
-            _,
-            current_line_column_data,
-        ) in column_mappings_by_line[
-            current_line_number
-        ][:-1]:
-            col_offset += current_line_column_data.max_length + 3
-            separator_line[col_offset] = BoxCharacter.UPWARD
+        if record_set_size > 0:
+            col_offset: int = -1
+            for (
+                _,
+                current_line_column_data,
+            ) in column_mappings_by_line[
+                current_line_number
+            ][:-1]:
+                col_offset += current_line_column_data.max_length + 3
+                separator_line[col_offset] = BoxCharacter.UPWARD
 
-        col_offset = -1
-        for (
-            _,
-            next_line_column_data,
-        ) in column_mappings_by_line[
-            current_line_number + 1
-        ][:-1]:
-            col_offset += next_line_column_data.max_length + 3
-            if separator_line[col_offset] == BoxCharacter.UPWARD:
-                separator_line[col_offset] = BoxCharacter.BOTH
-            else:
-                separator_line[col_offset] = BoxCharacter.DOWNWARD
+            col_offset = -1
+            for (
+                _,
+                next_line_column_data,
+            ) in column_mappings_by_line[
+                current_line_number + 1
+            ][:-1]:
+                col_offset += next_line_column_data.max_length + 3
+                if separator_line[col_offset] == BoxCharacter.UPWARD:
+                    separator_line[col_offset] = BoxCharacter.BOTH
+                else:
+                    separator_line[col_offset] = BoxCharacter.DOWNWARD
 
         separator_render += (
             "".join(
