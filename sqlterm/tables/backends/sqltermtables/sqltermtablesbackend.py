@@ -119,17 +119,18 @@ class SqlTermTablesBackend(TableBackend):
             max_line_length
             - len("│" + (" " * (len(f"{record_set_size + 1}") + 2)) + "├")
         )
-        if record_set_size > 0:
-            col_offset: int = -1
-            for (
-                _,
-                current_line_column_data,
-            ) in column_mappings_by_line[
-                current_line_number
-            ][:-1]:
-                col_offset += current_line_column_data.max_length + 3
-                separator_line[col_offset] = BoxCharacter.UPWARD
 
+        col_offset: int = -1
+        for (
+            _,
+            current_line_column_data,
+        ) in column_mappings_by_line[
+            current_line_number
+        ][:-1]:
+            col_offset += current_line_column_data.max_length + 3
+            separator_line[col_offset] = BoxCharacter.UPWARD
+
+        if is_header_separator or record_set_size > 0:
             col_offset = -1
             for (
                 _,
