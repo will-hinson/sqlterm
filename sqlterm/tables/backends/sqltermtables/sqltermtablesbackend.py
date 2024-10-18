@@ -4,8 +4,21 @@ from enum import auto, Enum
 import shutil
 from typing import Dict, List, Tuple
 
+import colorama
+
 from ...abstract import TableBackend
 from ....sql.generic.recordset import RecordSet
+
+# initialize colorama and a list of foreground colors to use
+colorama.init()
+colors: Tuple[colorama.Fore] = (
+    colorama.Fore.MAGENTA,
+    colorama.Fore.BLUE,
+    colorama.Fore.GREEN,
+    colorama.Fore.YELLOW,
+    colorama.Fore.CYAN,
+    colorama.Fore.RED,
+)
 
 
 class BoxCharacter(Enum):
@@ -207,11 +220,11 @@ class SqlTermTablesBackend(TableBackend):
         max_line_length: int = 0
         line_number: int = 0
         for data_column in table_data:
-            if data_column.max_length > (
+            if data_column.max_length - 1 > (
                 max_allowed_length := terminal_width - len(f"| {total_records + 1} | ")
             ):
                 # split the column values up
-                max_allowed_length -= 2
+                max_allowed_length -= 3
                 self._split_column_values(data_column, max_allowed_length)
 
             # check if this column plus its separator can fit on this line
@@ -251,13 +264,22 @@ class SqlTermTablesBackend(TableBackend):
         current_line_data: str = ""
         current_line_number: int = -1
         columns_are_multiline: bool = False
+        total_cell_count: int = 0
+        cell_count: int = 0
         for column_mapping, data_column in zip(column_line_mappings, table_data):
             if column_mapping.line_offset != current_line_number:
                 # only run against the first actual line. this allows the new line code below to run
                 # first and set things up
                 if current_line_number >= 0:
                     current_line_data += (
-                        " " * (max_line_length - len(current_line_data) + 1) + "│"
+                        " "
+                        * (
+                            max_line_length
+                            - len(current_line_data)
+                            + (len(colorama.Fore.RESET) * 2 * cell_count)
+                            + 1
+                        )
+                        + "│"
                     )
                     table_render += current_line_data + self._render_separator(
                         total_records,
@@ -270,16 +292,20 @@ class SqlTermTablesBackend(TableBackend):
                     )
                     columns_are_multiline = True
 
+                cell_count = 0
                 current_line_number += 1
                 current_line_data = ""
                 current_line_data += (
                     "\n" + "│" + (" " * (len(f"{total_records + 1}") + 2))
                 )
 
+            cell_count += 1
+            total_cell_count += 1
             current_line_data += (
                 "│ "
                 + (
-                    data_column.name
+                    f"{colors[total_cell_count % len(colors)]}{data_column.name}"
+                    + f"{colorama.Fore.RESET}"
                     + " " * (data_column.max_length - len(data_column.name))
                 )
                 + " "
@@ -288,7 +314,11 @@ class SqlTermTablesBackend(TableBackend):
         # append the final line of columns
         table_render += (
             current_line_data
-            + (" " * (max_line_length - len(current_line_data) + 1))
+            + " "
+            * (
+                (max_line_length - len(current_line_data) + 1)
+                + (len(colorama.Fore.RESET) * 2 * cell_count)
+            )
             + "│"
         )
 
@@ -309,11 +339,13 @@ class SqlTermTablesBackend(TableBackend):
         for index in range(total_records):
             # render the index column
             current_line_data: str = (
-                f"\n│ {str(index + 1).rjust(len(str(total_records)))} "
+                f"\n│ {colorama.Fore.LIGHTBLACK_EX}{str(index + 1).rjust(len(str(total_records)))}"
+                f"{colorama.Fore.RESET} "
             )
             current_line_number: int = 0
 
             # loop over all of the virtual line numbers
+            total_cell_count = 0
             while current_line_number <= max_line_number:
                 # find the highest offset for this column group
                 highest_line_offset: int = 0
@@ -323,21 +355,38 @@ class SqlTermTablesBackend(TableBackend):
                     )
 
                 # loop over and build the output line by line
+                start_cell = total_cell_count
                 for physical_line_offset in range(highest_line_offset + 1):
+                    cell_count = 0
+                    total_cell_count = start_cell
                     for _, data_column in column_mappings_by_line[current_line_number]:
                         if physical_line_offset < len(data_column.values[index]):
                             current_line_data += (
                                 "│ "
+                                + f"{colors[(total_cell_count + 1) % len(colors)]}"
                                 + data_column.values[index][physical_line_offset].ljust(
                                     data_column.max_length
                                 )
-                                + " "
+                                + f"{colorama.Fore.RESET} "
                             )
                         else:
                             current_line_data += f"│ {' ' * data_column.max_length} "
 
+                        total_cell_count += 1
+                        cell_count += 1
+
                     current_line_data += (
-                        " " * (max_line_length - len(current_line_data) + 1)
+                        " "
+                        * (
+                            max_line_length
+                            - len(current_line_data)
+                            + (
+                                (cell_count + (1 if current_line_number == 0 else 0))
+                                * len(colorama.Fore.RESET)
+                                * 2
+                            )
+                            + 1
+                        )
                     ) + "│"
                     table_render += current_line_data
                     current_line_data = ""
