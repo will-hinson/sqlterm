@@ -38,7 +38,7 @@ box_characters_by_type: Dict[BoxCharacter, str] = {
 
 @dataclass
 class DataColumn:
-    name: str
+    name: List[str]
     values: List[List[str]]
     max_length: int
 
@@ -58,7 +58,7 @@ class SqlTermTablesBackend(TableBackend):
         for index, column_name in enumerate(record_set.columns):
             table_data.append(
                 DataColumn(
-                    name=column_name,
+                    name=column_name.splitlines(),
                     values=(
                         values := [
                             (
@@ -71,7 +71,7 @@ class SqlTermTablesBackend(TableBackend):
                     ),
                     max_length=max(
                         len(string_value)
-                        for string_value in [column_name]
+                        for string_value in column_name.splitlines()
                         + [value for record in values for value in record]
                     ),
                 )
@@ -261,66 +261,69 @@ class SqlTermTablesBackend(TableBackend):
         )
 
         # now, add in each row of columns
-        current_line_data: str = ""
-        current_line_number: int = -1
-        columns_are_multiline: bool = False
+        current_line_data: str = f"\n│ {" " * len(str(total_records))} "
+        current_line_number: int = 0
         total_cell_count: int = 0
         cell_count: int = 0
-        for column_mapping, data_column in zip(column_line_mappings, table_data):
-            if column_mapping.line_offset != current_line_number:
-                # only run against the first actual line. this allows the new line code below to run
-                # first and set things up
-                if current_line_number >= 0:
-                    current_line_data += (
-                        " "
-                        * (
-                            max_line_length
-                            - len(current_line_data)
-                            + (len(colorama.Fore.RESET) * 2 * cell_count)
-                            + 1
-                        )
-                        + "│"
-                    )
-                    table_render += current_line_data + self._render_separator(
-                        total_records,
-                        max_line_length,
-                        current_line_number,
-                        column_mappings_by_line,
-                        is_header_separator=True,
-                        include_index_column=False,
-                        dashed=True,
-                    )
-                    columns_are_multiline = True
-
-                cell_count = 0
-                current_line_number += 1
-                current_line_data = ""
-                current_line_data += (
-                    "\n" + "│" + (" " * (len(f"{total_records + 1}") + 2))
-                )
-
-            cell_count += 1
-            total_cell_count += 1
-            current_line_data += (
-                "│ "
-                + (
-                    f"{colors[total_cell_count % len(colors)]}{data_column.name}"
-                    + f"{colorama.Fore.RESET}"
-                    + " " * (data_column.max_length - len(data_column.name))
-                )
-                + " "
-            )
-
-        # append the final line of columns
-        table_render += (
-            current_line_data
-            + " "
-            * (
-                (max_line_length - len(current_line_data) + 1)
-                + (len(colorama.Fore.RESET) * 2 * cell_count)
-            )
-            + "│"
+        max_line_number: int = max(
+            mapping.line_offset for mapping in column_line_mappings
         )
+        columns_are_multiline: bool = max_line_length != 0
+        for current_line_number in range(max_line_number + 1):
+            # find the highest offset for the columns on this line
+            highest_line_offset: int = 0
+            for _, data_column in column_mappings_by_line[current_line_number]:
+                highest_line_offset = max(
+                    highest_line_offset, len(data_column.name) - 1
+                )
+
+            # loop over and build the output line by line
+            start_cell = total_cell_count
+            for physical_line_offset in range(highest_line_offset + 1):
+                cell_count = 0
+                total_cell_count = start_cell
+                for _, data_column in column_mappings_by_line[current_line_number]:
+                    if physical_line_offset < len(data_column.name):
+                        current_line_data += (
+                            "│ "
+                            + f"{colors[(total_cell_count + 1) % len(colors)]}"
+                            + data_column.name[physical_line_offset].ljust(
+                                data_column.max_length
+                            )
+                            + f"{colorama.Fore.RESET} "
+                        )
+                    else:
+                        current_line_data += (
+                            f"│ {colors[(total_cell_count + 1) % len(colors)]}"
+                            f"{' ' * data_column.max_length}{colorama.Fore.RESET} "
+                        )
+
+                    total_cell_count += 1
+                    cell_count += 1
+
+                current_line_data += (
+                    " "
+                    * (
+                        max_line_length
+                        - len(current_line_data)
+                        + (cell_count * len(colorama.Fore.RESET) * 2)
+                        + 1
+                    )
+                ) + "│"
+                table_render += current_line_data
+                current_line_data = ""
+                current_line_data += f"\n│ {" " * len(str(total_records))} "
+
+            if current_line_number < max(column_mappings_by_line.keys()):
+                table_render += self._render_separator(
+                    total_records,
+                    max_line_length,
+                    current_line_number,
+                    column_mappings_by_line,
+                    is_header_separator=False,
+                    include_index_column=False,
+                    dashed=True,
+                )
 
         # render the line separating the headers from the data
         table_render += self._render_separator(
@@ -333,9 +336,6 @@ class SqlTermTablesBackend(TableBackend):
         )
 
         # now, render all the records
-        max_line_number: int = max(
-            mapping.line_offset for mapping in column_line_mappings
-        )
         for index in range(total_records):
             # render the index column
             current_line_data: str = (
@@ -370,7 +370,11 @@ class SqlTermTablesBackend(TableBackend):
                                 + f"{colorama.Fore.RESET} "
                             )
                         else:
-                            current_line_data += f"│ {' ' * data_column.max_length} "
+                            current_line_data += (
+                                f"│ {colors[(total_cell_count + 1) % len(colors)]}"
+                                f"{' ' * data_column.max_length}"
+                                f"{colorama.Fore.RESET} "
+                            )
 
                         total_cell_count += 1
                         cell_count += 1
@@ -380,14 +384,11 @@ class SqlTermTablesBackend(TableBackend):
                         * (
                             max_line_length
                             - len(current_line_data)
-                            + (
-                                (cell_count + (1 if current_line_number == 0 else 0))
-                                * len(colorama.Fore.RESET)
-                                * 2
-                            )
+                            + (cell_count * len(colorama.Fore.RESET) * 2)
                             + 1
                         )
                     ) + "│"
+                    cell_count = 0
                     table_render += current_line_data
                     current_line_data = ""
                     current_line_data += f"\n│ {" " * len(str(total_records))} "
