@@ -268,7 +268,7 @@ class SqlTermTablesBackend(TableBackend):
         max_line_number: int = max(
             mapping.line_offset for mapping in column_line_mappings
         )
-        columns_are_multiline: bool = max_line_length != 0
+        columns_are_multiline: bool = max_line_number != 0
         for current_line_number in range(max_line_number + 1):
             # find the highest offset for the columns on this line
             highest_line_offset: int = 0
