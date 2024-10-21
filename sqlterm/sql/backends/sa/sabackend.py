@@ -48,11 +48,16 @@ pyodbc.pooling = False
 # hotpatch it out when using redshift+psycopg2
 _original_pg_set_backslash_escapes = PGDialect._set_backslash_escapes
 
-# explicitly disable statement caching for Redshift to avoid SQLAlchemy warning
+# explicitly disable statement caching for Redshift and monkey patch an import_dbapi()
+# method to avoid SQLAlchemy warnings
 try:
     from sqlalchemy_redshift.dialect import RedshiftDialect
 
     RedshiftDialect.supports_statement_cache = False
+
+    from sqlalchemy_redshift.dialect import RedshiftDialect_psycopg2
+
+    RedshiftDialect_psycopg2.import_dbapi = RedshiftDialect_psycopg2.dbapi
 except:
     ...
 
