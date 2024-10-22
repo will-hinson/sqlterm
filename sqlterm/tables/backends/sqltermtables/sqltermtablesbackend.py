@@ -244,7 +244,7 @@ class SqlTermTablesBackend(TableBackend):
             column_line_mappings.append(ColumnSpec(line_offset=line_number))
             column_offset += (" " * data_column.max_length) + " | "
 
-        max_line_length = max(max_line_length, len(column_offset) - 2)
+        max_line_length = max(max_line_length, len(column_offset) - 3)
 
         column_mappings_by_line: Dict[int, Tuple[ColumnSpec, DataColumn]] = {}
         for column_spec, data_column in zip(column_line_mappings, table_data):
@@ -446,5 +446,6 @@ column", 2 AS b;
         # SELECT DISTINCT name, setting, min_val, max_val FROM pg_settings;
         # SHOW VIEW test.sh_sales_commissions;
         # SHOW VIEW test.sh_enq_campaigns;
+        # SELECT TOP 1 * FROM source.sh_budget_financials;
 
         return table_render
