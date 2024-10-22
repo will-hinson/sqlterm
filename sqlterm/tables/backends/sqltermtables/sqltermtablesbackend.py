@@ -88,7 +88,7 @@ class SqlTermTablesBackend(TableBackend):
     ) -> str:
         table_render: str = "\n"
         current_line_data = "╰"
-        current_line_data += "─" * (len(f"{total_records + 1}") + 2)
+        current_line_data += "─" * (len(f"{total_records}") + 2)
         last_line_mappings: List[ColumnSpec] = [
             column_mapping for column_mapping, _ in column_mappings_by_line[-1]
         ]
@@ -116,21 +116,20 @@ class SqlTermTablesBackend(TableBackend):
         separator_render: str
         if is_header_separator:
             separator_render = (
-                "\n" + "│" + (" " * (len(f"{record_set_size + 1}") + 2)) + "├"
+                "\n" + "│" + (" " * (len(f"{record_set_size}") + 2)) + "├"
             )
         else:
             separator_render = (
                 "\n"
                 + ("├" if include_index_column else "│")
                 + (line_char if include_index_column else " ")
-                * (len(f"{record_set_size + 1}") + 2)
+                * (len(f"{record_set_size}") + 2)
                 + ("┼" if include_index_column else "├")
             )
 
         # determine what points need upward-facing and downward-facing box characters
         separator_line: List[BoxCharacter] = [BoxCharacter.NEITHER] * (
-            max_line_length
-            - len("│" + (" " * (len(f"{record_set_size + 1}") + 2)) + "├")
+            max_line_length - len("│" + (" " * (len(f"{record_set_size}") + 2)) + "├")
         )
 
         col_offset: int = -1
@@ -178,7 +177,7 @@ class SqlTermTablesBackend(TableBackend):
         table_data: List[DataColumn],
     ) -> str:
         table_render: str = "╭"
-        table_render += "─" * (len(f"{total_records + 1}") + 2)
+        table_render += "─" * (len(f"{total_records}") + 2)
         for column_mapping, data_column in zip(column_line_mappings, table_data):
             if column_mapping.line_offset > 0:
                 table_render += "─" * (max_line_length - len(table_render))
