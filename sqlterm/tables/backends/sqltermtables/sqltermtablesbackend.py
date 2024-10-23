@@ -129,7 +129,8 @@ class SqlTermTablesBackend(TableBackend):
 
         # determine what points need upward-facing and downward-facing box characters
         separator_line: List[BoxCharacter] = [BoxCharacter.NEITHER] * (
-            max_line_length - len("│" + (" " * (len(f"{record_set_size}") + 2)) + "├")
+            (max_line_length - len("│" + (" " * (len(f"{record_set_size}") + 2)) + "├"))
+            + (1 if record_set_size == 1 else 0)
         )
 
         col_offset: int = -1
@@ -240,7 +241,7 @@ class SqlTermTablesBackend(TableBackend):
             column_line_mappings.append(ColumnSpec(line_offset=line_number))
             column_offset += (" " * data_column.max_length) + " | "
 
-        max_line_length = max(max_line_length, len(column_offset) - 2)
+        max_line_length = max(max_line_length, len(column_offset) - 3)
 
         column_mappings_by_line: Dict[int, Tuple[ColumnSpec, DataColumn]] = {}
         for column_spec, data_column in zip(column_line_mappings, table_data):
@@ -426,5 +427,6 @@ class SqlTermTablesBackend(TableBackend):
 value' AS "a
 column", 2 AS b;
         """
+        # SELECT DISTINCT name, setting, min_val, max_val FROM pg_settings;
 
         return table_render
