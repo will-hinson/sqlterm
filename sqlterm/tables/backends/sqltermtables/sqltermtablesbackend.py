@@ -1,6 +1,7 @@
 from copy import copy
 from dataclasses import dataclass
 from enum import auto, Enum
+import math
 import shutil
 from typing import Dict, List, Tuple
 
@@ -133,7 +134,7 @@ class SqlTermTablesBackend(TableBackend):
         # determine what points need upward-facing and downward-facing box characters
         separator_line: List[BoxCharacter] = [BoxCharacter.NEITHER] * (
             (max_line_length - len("│" + (" " * (len(f"{record_set_size}") + 2)) + "├"))
-            + (1 if record_set_size == 1 else 0)
+            # + (1 if record_set_size == 1 else 0)
         )
 
         col_offset: int = -1
@@ -179,6 +180,7 @@ class SqlTermTablesBackend(TableBackend):
         max_line_length: int,
         column_line_mappings: List[ColumnSpec],
         table_data: List[DataColumn],
+        columns_are_multiline: bool,
     ) -> str:
         table_render: str = "╭"
         table_render += "─" * (len(f"{total_records}") + 2)
@@ -189,6 +191,12 @@ class SqlTermTablesBackend(TableBackend):
 
             table_render += "┬"
             table_render += "─" * (data_column.max_length + 2)
+
+        table_render += (
+            "─"
+            if math.log10(total_records + 1).is_integer() and not columns_are_multiline
+            else ""
+        )
 
         table_render += "╮"
         return table_render
@@ -244,7 +252,7 @@ class SqlTermTablesBackend(TableBackend):
             column_line_mappings.append(ColumnSpec(line_offset=line_number))
             column_offset += (" " * data_column.max_length) + " | "
 
-        max_line_length = max(max_line_length, len(column_offset) - 3)
+        max_line_length = max(max_line_length, len(column_offset) - 2)
 
         column_mappings_by_line: Dict[int, Tuple[ColumnSpec, DataColumn]] = {}
         for column_spec, data_column in zip(column_line_mappings, table_data):
@@ -258,9 +266,19 @@ class SqlTermTablesBackend(TableBackend):
             max(column_mappings_by_line.keys())
         ]
 
+        # calculate the maximum line offset
+        max_line_number: int = max(
+            mapping.line_offset for mapping in column_line_mappings
+        )
+        columns_are_multiline: bool = max_line_number != 0
+
         # add the first header line
         table_render: str = self._render_top_border(
-            total_records, max_line_length, column_line_mappings, table_data
+            total_records,
+            max_line_length,
+            column_line_mappings,
+            table_data,
+            columns_are_multiline,
         )
 
         # now, add in each row of columns
@@ -268,10 +286,6 @@ class SqlTermTablesBackend(TableBackend):
         current_line_number: int = 0
         total_cell_count: int = 0
         cell_count: int = 0
-        max_line_number: int = max(
-            mapping.line_offset for mapping in column_line_mappings
-        )
-        columns_are_multiline: bool = max_line_number != 0
         for current_line_number in range(max_line_number + 1):
             # find the highest offset for the columns on this line
             highest_line_offset: int = 0
