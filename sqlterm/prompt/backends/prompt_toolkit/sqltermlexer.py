@@ -13,7 +13,12 @@ from typing import Callable, Dict, List
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import StyleAndTextTuples
 from prompt_toolkit.lexers import Lexer, PygmentsLexer
-from pygments.lexers.sql import MySqlLexer, PostgresLexer, SqlLexer, TransactSqlLexer
+from pygments.lexers.sql import (
+    MySqlLexer,
+    PostgresLexer,
+    SqlLexer,
+    TransactSqlLexer,
+)
 from pygments.lexers.shell import BashLexer, BatchLexer
 from pygments.token import String, Token
 
@@ -74,8 +79,8 @@ class SqlTermLexer(Lexer):
         self.default_sql_lexer = PygmentsLexer(_CustomAnsiSqlLexer)
         self.dialect_lexers = {
             SqlDialect.MYSQL: PygmentsLexer(_CustomMySqlLexer),
-            SqlDialect.POSTGRES: PygmentsLexer(PostgresLexer),
-            SqlDialect.REDSHIFT: PygmentsLexer(PostgresLexer),
+            SqlDialect.POSTGRES: PygmentsLexer(_CustomPostgresLexer),
+            SqlDialect.REDSHIFT: PygmentsLexer(_CustomPostgresLexer),
             SqlDialect.TSQL: PygmentsLexer(_CustomTransactSqlLexer),
         }
 

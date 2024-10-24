@@ -232,7 +232,7 @@ class SqlTermTablesBackend(TableBackend):
                 len(column_offset) + len(" | ") + data_column.max_length
                 > terminal_width
             ):
-                max_line_length = max(max_line_length, len(column_offset) - 1)
+                max_line_length = max(max_line_length, len(column_offset) - 2)
 
                 # start a new line
                 column_offset: int = f"| {total_records + 1} | "
@@ -241,7 +241,7 @@ class SqlTermTablesBackend(TableBackend):
             column_line_mappings.append(ColumnSpec(line_offset=line_number))
             column_offset += (" " * data_column.max_length) + " | "
 
-        max_line_length = max(max_line_length, len(column_offset) - 3)
+        max_line_length = max(max_line_length, len(column_offset) - 2)
 
         column_mappings_by_line: Dict[int, Tuple[ColumnSpec, DataColumn]] = {}
         for column_spec, data_column in zip(column_line_mappings, table_data):
@@ -383,9 +383,22 @@ class SqlTermTablesBackend(TableBackend):
                         " "
                         * (
                             max_line_length
-                            - len(current_line_data)
-                            + (cell_count * len(colorama.Fore.RESET) * 2)
-                            + 1
+                            - (
+                                len(current_line_data)
+                                - (
+                                    # this accounts for the index escape sequences on line 0
+                                    len(colorama.Fore.RESET) * 2
+                                    if current_line_number == 0
+                                    else 0
+                                )
+                                - (
+                                    # this accounts for all of the cell escape codes
+                                    cell_count
+                                    * len(colorama.Fore.RESET)
+                                    * 2
+                                )
+                                - 1
+                            )
                         )
                     ) + "│"
                     cell_count = 0
