@@ -406,6 +406,7 @@ class SqlTermTablesBackend(TableBackend):
                                     # this accounts for the index escape sequences on line 0
                                     len(colorama.Fore.RESET) * 2
                                     if current_line_number == 0
+                                    and physical_line_offset == 0
                                     else 0
                                 )
                                 - (
