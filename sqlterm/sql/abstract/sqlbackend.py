@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from .query import Query
 from ...tables.abstract import TableBackend
@@ -63,6 +63,10 @@ class SqlBackend(metaclass=ABCMeta):
         Raises:
             Nothing
         """
+
+    @property
+    @abstractmethod
+    def dialect_to_package_map(self: "SqlBackend") -> Dict[str, List[str]]: ...
 
     @abstractmethod
     def disable_profiling(self: "SqlBackend") -> None: ...

@@ -1,4 +1,4 @@
-from typing import List, Tuple, Type
+from typing import Dict, List, Tuple, Type
 import warnings
 
 import pyodbc
@@ -68,6 +68,14 @@ class SaBackend(SqlBackend):
     __engine: Engine | None = None
     __inspector: SqlInspector | None = None
     __profiler: SqlProfiler | None = None
+
+    __dialect_to_package_map: Dict[str, List[str]] = {
+        "mssql+pyodbc": ["pyodbc==5.1.0"],
+        "mysql+mysqlconnector": ["mysql-connector-python==8.3.0"],
+        "oracle+oracledb": ["oracledb==2.1.2"],
+        "postgresql+psycopg2": ["psycopg2==2.9.9"],
+        "redshift+psycopg2": ["sqlalchemy-redshift==0.7.0"],
+    }
 
     def connect(self: "SaBackend", connection_string: str) -> None:
         self._connect_with_string(connection_string)
@@ -153,6 +161,10 @@ class SaBackend(SqlBackend):
     @property
     def dialect(self: "SaBackend") -> SaDialect | None:
         return self.__dialect
+
+    @property
+    def dialect_to_package_map(self: "SaBackend") -> Dict[str, List[str]]:
+        return self.__dialect_to_package_map
 
     def _dialect_name_from_driver_string(self: "SaBackend", drivername: str) -> str:
         if "+" in drivername:
@@ -316,22 +328,13 @@ class SaBackend(SqlBackend):
         return self.__profiler is not None
 
     def required_packages_for_dialect(self: "SaBackend", dialect: str) -> List[str]:
-        match dialect:
-            case "mssql+pyodbc":
-                return ["pyodbc==5.1.0"]
-            case "mysql+mysqlconnector":
-                return ["mysql-connector-python==8.3.0"]
-            case "oracle+oracledb":
-                return ["oracledb==2.1.2"]
-            case "postgresql+psycopg2":
-                return ["psycopg2==2.9.9"]
-            case "redshift+psycopg2":
-                return ["sqlalchemy-redshift==0.7.0"]
-            case _:
-                raise DialectException(
-                    f"{type(self).__name__}: Required packages for dialect '{dialect}' "
-                    "are unknown"
-                )
+        if dialect not in self.dialect_to_package_map:
+            raise DialectException(
+                f"{type(self).__name__}: Required packages for dialect '{dialect}' "
+                "are unknown"
+            )
+
+        return self.dialect_to_package_map[dialect]
 
     def resolve_connection_string(
         self: "SqlBackend", connection_string: str, test_connection: bool = False

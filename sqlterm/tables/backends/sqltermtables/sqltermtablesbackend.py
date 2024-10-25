@@ -62,7 +62,10 @@ class SqlTermTablesBackend(TableBackend):
                     values=(
                         values := [
                             (
-                                str(record[index]).splitlines()
+                                str(record[index])
+                                .replace("\t", "    ")
+                                .replace("\r", "")
+                                .splitlines()
                                 if record[index] is not None
                                 else ["NULL"]
                             )
@@ -441,5 +444,7 @@ value' AS "a
 column", 2 AS b;
         """
         # SELECT DISTINCT name, setting, min_val, max_val FROM pg_settings;
+        # SHOW VIEW test.sh_sales_commissions;
+        # SHOW VIEW test.sh_enq_campaigns;
 
         return table_render
