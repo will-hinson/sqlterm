@@ -452,15 +452,4 @@ class SqlTermTablesBackend(TableBackend):
             total_records, max_line_length, column_mappings_by_line, table_data
         )
 
-        # SELECT TOP 2 * FROM INFORMATION_SCHEMA.TABLES;
-        """
-        SELECT '  some
-value' AS "a
-column", 2 AS b;
-        """
-        # SELECT DISTINCT name, setting, min_val, max_val FROM pg_settings;
-        # SHOW VIEW test.sh_sales_commissions;
-        # SHOW VIEW test.sh_enq_campaigns;
-        # SELECT TOP 1 * FROM source.sh_budget_financials;
-
         return table_render
