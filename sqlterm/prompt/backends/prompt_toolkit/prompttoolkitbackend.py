@@ -33,7 +33,6 @@ from prompt_toolkit.styles import (
 from prompt_toolkit.validation import Validator, ValidationError
 from pygments.styles import get_style_by_name, get_all_styles
 from pygments.token import Token
-import rich
 import sqlparse
 
 from .... import constants
