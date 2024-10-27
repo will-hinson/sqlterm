@@ -166,9 +166,9 @@ class SqlTermConfig:
         return SqlTermConfig(
             version=constants.CONFIG_VERSION,
             aliases={},
-            color_scheme="dracula",
+            color_scheme="tokyo-night-dark",
             autoformat=False,
-            table_backend=TableBackendType.TERMINAL_TABLES,
+            table_backend=TableBackendType.SQLTERM_TABLES,
         )
 
     def to_file(self: "SqlTermConfig", output_path: str) -> None:
