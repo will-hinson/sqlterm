@@ -1,5 +1,4 @@
 from .sqlexception import SqlException
 
 
-class SqlConnectionException(SqlException):
-    ...
+class SqlConnectionException(SqlException): ...

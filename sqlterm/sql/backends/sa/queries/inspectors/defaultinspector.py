@@ -187,9 +187,9 @@ class DefaultInspector(SqlInspector):
         self._cache_column_map(connection)
 
         # get a mapping of schemas by catalog
-        schemas_by_catalog: Dict[
-            str, Dict[str, SqlObject]
-        ] = self._get_schemas_by_catalog(connection)
+        schemas_by_catalog: Dict[str, Dict[str, SqlObject]] = (
+            self._get_schemas_by_catalog(connection)
+        )
 
         # populate the mapping with underlying objects
         for populate_function in (

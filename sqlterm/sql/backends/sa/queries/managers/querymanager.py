@@ -59,8 +59,7 @@ class QueryManager(metaclass=ABCMeta):
         return self
 
     @abstractmethod
-    def __exit__(self: "QueryManager", exc_type, exc_value, traceback) -> None:
-        ...
+    def __exit__(self: "QueryManager", exc_type, exc_value, traceback) -> None: ...
 
     @abstractmethod
     def fetch_row(self: "QueryManager") -> Tuple:

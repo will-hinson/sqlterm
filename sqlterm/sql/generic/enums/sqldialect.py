@@ -6,5 +6,6 @@ class SqlDialect(StrEnum):
     MYSQL: "SqlDialect" = auto()
     ORACLE: "SqlDialect" = auto()
     POSTGRES: "SqlDialect" = auto()
+    REDSHIFT: "SqlDialect" = auto()
     SQLITE: "SqlDialect" = auto()
     TSQL: "SqlDialect" = auto()

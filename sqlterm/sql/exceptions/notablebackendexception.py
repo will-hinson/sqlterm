@@ -1,5 +1,4 @@
 from .sqlbackendexception import SqlBackendException
 
 
-class NoTableBackendException(SqlBackendException):
-    ...
+class NoTableBackendException(SqlBackendException): ...

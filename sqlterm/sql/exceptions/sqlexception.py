@@ -1,5 +1,4 @@
 from ...sqltermexception import SqlTermException
 
 
-class SqlException(SqlTermException):
-    ...
+class SqlException(SqlTermException): ...

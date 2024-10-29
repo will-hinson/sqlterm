@@ -9,7 +9,7 @@ from .....generic.enums import SqlDialect, SqlObjectType
 from .sqlinspector import SqlInspector
 
 
-class PostgresInspector(SqlInspector):
+class RedshiftInspector(SqlInspector):
     _postgres_keywords: Set[str] = {
         word.upper()
         for word_list in [
@@ -65,7 +65,7 @@ class PostgresInspector(SqlInspector):
 
     __column_map: Dict[str, Dict[str, Dict[str, Set[str]]]] | None = None
 
-    def _cache_column_map(self: "PostgresInspector", connection: Connection) -> None:
+    def _cache_column_map(self: "RedshiftInspector", connection: Connection) -> None:
         self.__column_map = {}
 
         for (
@@ -97,7 +97,7 @@ class PostgresInspector(SqlInspector):
             )
 
     def _fetch_query_results(
-        self: "PostgresInspector", query: str, connection: Connection
+        self: "RedshiftInspector", query: str, connection: Connection
     ) -> Set[Tuple]:
         return set(
             map(
@@ -107,7 +107,10 @@ class PostgresInspector(SqlInspector):
         )
 
     def _get_columns_for_table(
-        self: "DefaultInspector", table_catalog: str, table_schema: str, table_name: str
+        self: "RedshiftInspector",
+        table_catalog: str,
+        table_schema: str,
+        table_name: str,
     ) -> Set[SqlObject] | None:
         if (
             self.__column_map is not None
@@ -125,14 +128,14 @@ class PostgresInspector(SqlInspector):
         return None
 
     def _get_current_database_name(
-        self: "PostgresInspector", connection: Connection
+        self: "RedshiftInspector", connection: Connection
     ) -> str:
         return connection.execute(
             self.parent.make_query("SELECT CURRENT_DATABASE();").sa_text
         ).scalar()  # type: ignore
 
     def _get_database_names(
-        self: "PostgresInspector", connection: Connection
+        self: "RedshiftInspector", connection: Connection
     ) -> Set[str]:
         return set(
             map(
@@ -150,7 +153,7 @@ class PostgresInspector(SqlInspector):
         )
 
     def _get_schemas_by_database(
-        self: "PostgresInspector", current_database: str, connection: Connection
+        self: "RedshiftInspector", current_database: str, connection: Connection
     ) -> Dict[str, Dict[str, SqlObject]]:
         # first, get a list of databases at the global level
         schemas_by_database: Dict[str, Dict[str, SqlObject]] = {
@@ -177,7 +180,7 @@ class PostgresInspector(SqlInspector):
         return schemas_by_database
 
     def _populate_functions(
-        self: "PostgresInspector",
+        self: "RedshiftInspector",
         schemas_by_database: Dict[str, Dict[str, SqlObject]],
         current_database: str,
         connection: Connection,
@@ -191,11 +194,8 @@ class PostgresInspector(SqlInspector):
                 pg_catalog.pg_proc AS a
             LEFT JOIN pg_catalog.pg_namespace AS b ON
                 a.pronamespace = b.oid
-            WHERE 
-                a.prokind NOT IN (
-                    'p'
-                )
-                AND a.prorettype != 'pg_catalog.trigger'::pg_catalog.regtype
+            WHERE
+                a.prorettype != 'pg_catalog.trigger'::pg_catalog.regtype
                 AND pg_catalog.pg_function_is_visible(a.oid);
             """,
             connection=connection,
@@ -205,7 +205,7 @@ class PostgresInspector(SqlInspector):
             )
 
     def _populate_procedures(
-        self: "PostgresInspector",
+        self: "RedshiftInspector",
         schemas_by_database: Dict[str, Dict[str, SqlObject]],
         current_database: str,
         connection: Connection,
@@ -227,7 +227,7 @@ class PostgresInspector(SqlInspector):
             )
 
     def _populate_tables(
-        self: "PostgresInspector",
+        self: "RedshiftInspector",
         schemas_by_database: Dict[str, Dict[str, SqlObject]],
         current_database: str,
         connection: Connection,
@@ -253,7 +253,7 @@ class PostgresInspector(SqlInspector):
             )
 
     def _populate_types(
-        self: "PostgresInspector",
+        self: "RedshiftInspector",
         schemas_by_database: Dict[str, Dict[str, SqlObject]],
         current_database: str,
         connection: Connection,
@@ -278,7 +278,7 @@ class PostgresInspector(SqlInspector):
             )
 
     def _populate_views(
-        self: "PostgresInspector",
+        self: "RedshiftInspector",
         schemas_by_database: Dict[str, Dict[str, SqlObject]],
         current_database: str,
         connection: Connection,
@@ -303,7 +303,7 @@ class PostgresInspector(SqlInspector):
                 SqlObject(view_name, type=SqlObjectType.VIEW, children=children)
             )
 
-    def refresh_structure(self: "PostgresInspector") -> None:
+    def refresh_structure(self: "RedshiftInspector") -> None:
         connection: Connection = self.parent.make_connection()
 
         # prebuild a list of columns

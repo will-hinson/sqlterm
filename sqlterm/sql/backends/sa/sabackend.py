@@ -3,6 +3,7 @@ import warnings
 
 import pyodbc
 from sqlalchemy import Connection, create_engine, make_url, NullPool, URL
+from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -42,6 +43,18 @@ from .saquery import SaQuery
 
 # disable pyodbc pooling so that extra database connections will not stay open
 pyodbc.pooling = False
+
+# store a reference to the original _set_backslash_escapes() method. we need to
+# hotpatch it out when using redshift+psycopg2
+_original_pg_set_backslash_escapes = PGDialect._set_backslash_escapes
+
+# explicitly disable statement caching for Redshift to avoid SQLAlchemy warning
+try:
+    from sqlalchemy_redshift.dialect import RedshiftDialect
+
+    RedshiftDialect.supports_statement_cache = False
+except:
+    ...
 
 
 class SaBackend(SqlBackend):
@@ -271,6 +284,12 @@ class SaBackend(SqlBackend):
     def make_engine(
         self: "SaBackend", connection_url: URL, dialect: SaDialect
     ) -> Engine:
+        # disable/enable backslash escapes as necessary
+        if connection_url.drivername == "redshift+psycopg2":
+            PGDialect._set_backslash_escapes = lambda *_: None
+        else:
+            PGDialect._set_backslash_escapes = _original_pg_set_backslash_escapes
+
         return create_engine(
             connection_url,
             connect_args=(
@@ -293,14 +312,16 @@ class SaBackend(SqlBackend):
 
     def required_packages_for_dialect(self: "SaBackend", dialect: str) -> List[str]:
         match dialect:
-            case "oracle+oracledb":
-                return ["oracledb==2.1.2"]
-            case "postgresql+psycopg2":
-                return ["psycopg2==2.9.9"]
             case "mssql+pyodbc":
                 return ["pyodbc==5.1.0"]
             case "mysql+mysqlconnector":
                 return ["mysql-connector-python==8.3.0"]
+            case "oracle+oracledb":
+                return ["oracledb==2.1.2"]
+            case "postgresql+psycopg2":
+                return ["psycopg2==2.9.9"]
+            case "redshift+psycopg2":
+                return ["sqlalchemy-redshift==0.7.0"]
             case _:
                 raise DialectException(
                     f"{type(self).__name__}: Required packages for dialect '{dialect}' "
