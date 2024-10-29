@@ -153,7 +153,12 @@ class MsSqlManager(QueryManager):
         self._print_all_messages()
 
         # try to advance to the next record set
-        result: bool | None = self.__cursor.nextset()
+        result: bool | None
+        try:
+            result = self.__cursor.nextset()
+        except (pyodbc.ProgrammingError, pyodbc.OperationalError) as pe:
+            raise SqlQueryException(self._message_for_pyodbc_error(pe)) from pe
+
         if not result:
             # the cursor has no more record sets. return false to signify this state
             return False

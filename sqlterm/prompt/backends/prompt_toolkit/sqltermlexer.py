@@ -22,20 +22,16 @@ from ....sql.generic.enums import SqlDialect
 from ....prompt.abstract import PromptBackend
 
 
-class _CustomAnsiSqlLexer(SqlLexer):
-    ...
+class _CustomAnsiSqlLexer(SqlLexer): ...
 
 
-class _CustomMySqlLexer(MySqlLexer):
-    ...
+class _CustomMySqlLexer(MySqlLexer): ...
 
 
-class _CustomPostgresLexer(PostgresLexer):
-    ...
+class _CustomPostgresLexer(PostgresLexer): ...
 
 
-class _CustomTransactSqlLexer(TransactSqlLexer):
-    ...
+class _CustomTransactSqlLexer(TransactSqlLexer): ...
 
 
 class SqlTermLexer(Lexer):
@@ -79,6 +75,7 @@ class SqlTermLexer(Lexer):
         self.dialect_lexers = {
             SqlDialect.MYSQL: PygmentsLexer(_CustomMySqlLexer),
             SqlDialect.POSTGRES: PygmentsLexer(PostgresLexer),
+            SqlDialect.REDSHIFT: PygmentsLexer(PostgresLexer),
             SqlDialect.TSQL: PygmentsLexer(_CustomTransactSqlLexer),
         }
 

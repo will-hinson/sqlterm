@@ -5,6 +5,7 @@ from .mssqlinspector import MsSqlInspector
 from .mysqlinspector import MySqlInspector
 from .oracleinspector import OracleInspector
 from .postgresinspector import PostgresInspector
+from .redshiftinspector import RedshiftInspector
 from .sqlinspector import SqlInspector
 from .sqliteinspector import SqliteInspector
 
@@ -15,5 +16,6 @@ sql_inspector_for_dialect: Dict[SaDialect, Type[SqlInspector]] = {
     SaDialect.MYSQL: MySqlInspector,
     SaDialect.ORACLE: OracleInspector,
     SaDialect.POSTGRES: PostgresInspector,
+    SaDialect.REDSHIFT: RedshiftInspector,
     SaDialect.SQLITE: SqliteInspector,
 }

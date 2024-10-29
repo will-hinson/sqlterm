@@ -17,8 +17,7 @@ class SqlInspector(Thread, metaclass=ABCMeta):
         return self.__parent
 
     @abstractmethod
-    def refresh_structure(self: "SqlInspector") -> None:
-        ...
+    def refresh_structure(self: "SqlInspector") -> None: ...
 
     def run(self: "SqlInspector") -> None:
         # pylint: disable=broad-exception-caught

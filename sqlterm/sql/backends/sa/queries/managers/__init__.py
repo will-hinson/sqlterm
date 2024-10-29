@@ -15,5 +15,6 @@ query_manager_for_dialect: Dict[SaDialect, Type[QueryManager]] = {
     SaDialect.MYSQL: MySqlManager,
     SaDialect.ORACLE: OracleManager,
     SaDialect.POSTGRES: PostgresManager,
+    SaDialect.REDSHIFT: PostgresManager,
     SaDialect.SQLITE: SqliteManager,
 }

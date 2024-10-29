@@ -1,5 +1,4 @@
 from .sqlbackendexception import SqlBackendException
 
 
-class SqlBackendMismatchException(SqlBackendException):
-    ...
+class SqlBackendMismatchException(SqlBackendException): ...

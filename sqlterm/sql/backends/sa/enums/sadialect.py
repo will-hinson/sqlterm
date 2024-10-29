@@ -13,6 +13,7 @@ class SaDialect(StrEnum):
     MYSQL = "mysql"
     ORACLE = "oracle"
     POSTGRES = "postgresql"
+    REDSHIFT = "redshift"
     SQLITE = "sqlite"
 
 
