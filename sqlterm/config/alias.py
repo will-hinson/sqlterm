@@ -17,3 +17,4 @@ class Alias:
     """
 
     url: str
+    prompt_color: str | None = None

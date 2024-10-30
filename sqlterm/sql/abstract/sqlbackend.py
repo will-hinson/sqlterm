@@ -10,6 +10,10 @@ class SqlBackend(metaclass=ABCMeta):
     parent: "sqlterm.SqlTerm" = None  # type: ignore
     table_backend: TableBackend | None = None
 
+    @property
+    @abstractmethod
+    def alias(self: "SqlBackend") -> str | None: ...
+
     @abstractmethod
     def connect(self: "SqlBackend", connection_string: str) -> None:
         """
@@ -138,6 +142,9 @@ class SqlBackend(metaclass=ABCMeta):
     def resolve_connection_string(
         self: "SqlBackend", connection_string: str, test_connection: bool = False
     ) -> str: ...
+
+    @abstractmethod
+    def set_alias(self: "SqlBackend", alias_name: str) -> None: ...
 
 
 # pylint: disable=wrong-import-position

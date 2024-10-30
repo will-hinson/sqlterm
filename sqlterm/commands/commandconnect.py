@@ -45,6 +45,10 @@ class CommandConnect(sqltermcommand.SqlTermCommand):
         # connect to the provided server
         try:
             self.parent.context.backends.sql.connect(self.args.connection_string)
+            if (alias_name := self.parent.context.backends.sql.alias) is not None:
+                self.parent.context.backends.prompt.set_prompt_color(
+                    self.parent.context.config.aliases[alias_name].prompt_color
+                )
         except MissingModuleException:
             print(
                 "Hint: Try running the 'install' command for the driver/dialect in "

@@ -99,12 +99,14 @@ class PromptToolkitBackend(PromptBackend):
     __lexer: SqlTermLexer
     __session: PromptSession
     __current_statement_index: int
+    __prompt_color: str
 
     __dialect_escape_chars: Dict[SqlDialect, str] = {
         SqlDialect.GENERIC: '"',
         SqlDialect.MYSQL: "`",
         SqlDialect.ORACLE: '"',
         SqlDialect.POSTGRES: '"',
+        SqlDialect.REDSHIFT: '"',
         SqlDialect.SQLITE: '"',
         SqlDialect.TSQL: '"',
     }
@@ -119,6 +121,7 @@ class PromptToolkitBackend(PromptBackend):
 
         self.__completer = DefaultCompleter(parent=self)
         self.__lexer = self._default_lexer
+        self.__prompt_color = None
 
         self.__session = PromptSession(
             *args,  # type: ignore
@@ -798,7 +801,11 @@ class PromptToolkitBackend(PromptBackend):
                 "error.type": "fg:ansibrightred",
                 "error.message": "fg:ansibrightred",
                 "prompt-cell.bracket": f"fg:#{colors[Token.Text]}",
-                "prompt-cell.number": f"fg:#{colors[Token.Name.Builtin]} bold",
+                "prompt-cell.number": (
+                    f"fg:#{colors[Token.Name.Builtin]} bold"
+                    if self.__prompt_color is None
+                    else f"fg:{self.__prompt_color} bold"
+                ),
                 "line-number": "fg:darkgray",
                 "message.info": "fg:darkgray",
                 "message.progress": f"fg:#{colors[Token.Literal.String.Symbol]}",
@@ -982,11 +989,18 @@ class PromptToolkitBackend(PromptBackend):
         if color_scheme in sqlterm_styles:
             return sqlterm_styles[color_scheme]
 
-        # otherwise, default to dracula
-        return get_style_by_name("dracula")
+        # otherwise, default to tokyo-night-dark
+        return sqlterm_styles["tokyo-night-dark"]
 
     def hide_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()
+
+    def is_valid_color(self: "PromptToolkitBackend", color: str) -> bool:
+        try:
+            Style.from_dict({"": color})
+            return True
+        except:
+            return False
 
     def _prompt_continuation(
         self, width: int, line_number: int, is_soft_wrap: bool
@@ -1102,6 +1116,10 @@ class PromptToolkitBackend(PromptBackend):
     @property
     def session(self: "PromptToolkitBackend") -> PromptSession:
         return self.__session
+
+    def set_prompt_color(self: "PromptToolkitBackend", color: str | None) -> None:
+        self.__prompt_color = color
+        self.refresh_style()
 
     def show_cursor(self: "PromptToolkitBackend") -> None:
         self.session.app.output.hide_cursor()

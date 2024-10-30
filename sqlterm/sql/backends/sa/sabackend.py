@@ -64,6 +64,7 @@ except:
 
 class SaBackend(SqlBackend):
     __active_connection: Connection | None = None
+    __alias: str | None = None
     __dialect: SaDialect | None = None
     __engine: Engine | None = None
     __inspector: SqlInspector | None = None
@@ -76,6 +77,10 @@ class SaBackend(SqlBackend):
         "postgresql+psycopg2": ["psycopg2==2.9.9"],
         "redshift+psycopg2": ["sqlalchemy-redshift==0.7.0"],
     }
+
+    @property
+    def alias(self: "SaBackend") -> str | None:
+        return self.__alias
 
     def connect(self: "SaBackend", connection_string: str) -> None:
         self._connect_with_string(connection_string)
@@ -90,6 +95,7 @@ class SaBackend(SqlBackend):
 
     def disconnect(self: "SaBackend") -> None:
         self.parent.context.backends.prompt.clear_completions()
+        self.parent.context.backends.prompt.set_prompt_color(None)
 
         if self.__active_connection is not None:
             self.__active_connection.close()
@@ -99,6 +105,7 @@ class SaBackend(SqlBackend):
             self.__engine.dispose()
             self.__engine = None
 
+        self.__alias = None
         self.__dialect = None
         self._update_prompt_dialect()
         self.disable_profiling()
@@ -129,6 +136,10 @@ class SaBackend(SqlBackend):
         # ensure we're not already connected
         self._init_engine(connection_url)
 
+        # store the alias for this connection if there is one
+        if connection_string in self.parent.context.config.aliases:
+            self.__alias = connection_string
+
         # establish a connection to the sql host
         try:
             self.__active_connection = self.make_connection()
@@ -137,7 +148,7 @@ class SaBackend(SqlBackend):
             # with DDL statements in postgres
             #
             # self.__active_connection.execution_options(stream_results=True)
-        except SQLAlchemyError as sae:
+        except Exception as sae:
             self.disconnect()
             raise ConnectionFailedException("\n".join(sae.args)) from sae
 
@@ -357,6 +368,9 @@ class SaBackend(SqlBackend):
                 ) from exc
 
         return url.render_as_string(hide_password=False)
+
+    def set_alias(self: "SqlBackend", alias_name: str) -> None:
+        self.__alias = alias_name
 
     def _show_dialect_warnings(self: "SaBackend", connection_url: URL) -> None:
         warnings.simplefilter("always")

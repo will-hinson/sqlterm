@@ -51,6 +51,9 @@ class PromptBackend(metaclass=ABCMeta):
         """
 
     @abstractmethod
+    def is_valid_color(self: "PromptBackend", color: str) -> bool: ...
+
+    @abstractmethod
     def clear_completions(self: "PromptBackend") -> None:
         """
         Clears any current completion options stored in this prompt backend
@@ -250,6 +253,9 @@ class PromptBackend(metaclass=ABCMeta):
 
     @abstractmethod
     def refresh_style(self: "PromptBackend") -> None: ...
+
+    @abstractmethod
+    def set_prompt_color(self: "PromptBackend", color: str | None) -> None: ...
 
     @abstractmethod
     def show_cursor(self: "PromptBackend") -> None:

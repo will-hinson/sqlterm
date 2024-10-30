@@ -74,6 +74,8 @@ class CommandAlias(sqltermcommand.SqlTermCommand):
                 alias_connection_string, test_connection=should_test
             ),
         )
+        if not should_test:
+            self.parent.context.backends.sql.set_alias(self.args.alias_name)
 
     def _alias_list(self: "CommandAlias") -> None:
         for alias_name in sorted(self.parent.context.config.aliases):
@@ -86,6 +88,8 @@ class CommandAlias(sqltermcommand.SqlTermCommand):
             )
 
         self.parent.remove_alias(self.args.alias_name)
+        if self.parent.context.backends.sql.alias == self.args.alias_name:
+            self.parent.context.backends.sql.set_alias(None)
 
     def execute(self: "CommandAlias") -> None:
         match self.args.subcommand:

@@ -8,9 +8,13 @@ execution when the user types '%set ...' at the command line
 from argparse import ArgumentParser
 from typing import List
 
+from prompt_toolkit.styles import Style
+
 from . import sqltermcommand
 from .. import constants
 from ..config import TableBackendType
+from .exceptions import InvalidArgumentException, NoAliasExistsException
+from ..sql.exceptions import DisconnectedException
 
 ArgumentParser.exit = sqltermcommand.SqlTermCommand.default_exit  # type: ignore
 _command_set_arg_parser: ArgumentParser = ArgumentParser(
@@ -22,6 +26,12 @@ _command_set_arg_parser: ArgumentParser = ArgumentParser(
 
 _sub_parsers = _command_set_arg_parser.add_subparsers(dest="subcommand")
 _sub_parsers.required = True
+
+_command_set_prompt_color_parser = _sub_parsers.add_parser(
+    "prompt_color",
+    help="Modifies the prompt color for the selected alias",
+)
+_command_set_prompt_color_parser.add_argument("color", type=str)
 
 _command_set_table_backend_parser = _sub_parsers.add_parser(
     "table_backend",
@@ -47,6 +57,8 @@ class CommandSet(sqltermcommand.SqlTermCommand):
 
     def execute(self: "CommandSet") -> None:
         match self.args.subcommand:
+            case "prompt_color":
+                self._set_prompt_color()
             case "table_backend":
                 self._set_table_backend()
             case _:
@@ -87,6 +99,30 @@ class CommandSet(sqltermcommand.SqlTermCommand):
                     ]
 
         return []
+
+    def _set_prompt_color(self: "CommandSet") -> None:
+        if not self.parent.context.backends.sql.connected:
+            raise DisconnectedException(
+                "An aliased connection must be established first"
+            )
+        if self.parent.context.backends.sql.alias is None:
+            raise NoAliasExistsException(
+                "The current connection does not have an alias"
+            )
+
+        # check that the color is a valid color for the prompt backend. if the color is 'default',
+        # skip this check
+        if (
+            self.args.color != "default"
+            and not self.parent.context.backends.prompt.is_valid_color(self.args.color)
+        ):
+            raise InvalidArgumentException("Invalid color argument for prompt_color")
+        if self.args.color == "default":
+            self.args.color = None
+
+        self.parent.set_alias_prompt_color(
+            self.parent.context.backends.sql.alias, self.args.color
+        )
 
     def _set_table_backend(self: "CommandSet") -> None:
         try:

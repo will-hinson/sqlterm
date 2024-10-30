@@ -239,3 +239,11 @@ class SqlTerm:
         )()
         self.context.backends.sql.table_backend = self.context.backends.table
         self._flush_config()
+
+    def set_alias_prompt_color(
+        self: "SqlTerm", alias_name: str, prompt_color: str
+    ) -> None:
+        self.context.config.aliases[alias_name].prompt_color = prompt_color
+        self._flush_config()
+
+        self.context.backends.prompt.set_prompt_color(prompt_color)
