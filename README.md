@@ -42,5 +42,6 @@ The following SQL dialect and driver combinations are fully supported by SQLTerm
 | MySQL                | `mysqlconnector` | `mysql+mysqlconnector://` |
 | SQLite               | `sqlite`         | `sqlite://`               |
 | Oracle SQL           | `oracledb`       | `oracle+oracledb://`      |
+| Amazon Redshift      | `psycopg2`       | `redshift+psycopg2://`    |
 
 SQLTerm is integrated with [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy) and any of [its supported dialects](https://docs.sqlalchemy.org/en/20/dialects/) should be supported in theory. However, queries will be limited to a single result set and autocompletion support will be limited to objects in the `INFORMATION_SCHEMA`. 
