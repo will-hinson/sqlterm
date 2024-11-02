@@ -27,7 +27,11 @@ _command_set_table_backend_parser = _sub_parsers.add_parser(
     "table_backend",
     help="Modifies the current table backend to the provided one",
 )
-_command_set_table_backend_parser.add_argument("backend_name", type=str)
+_command_set_table_backend_parser.add_argument(
+    "backend_name",
+    type=str,
+    choices=TableBackendType,
+)
 
 
 class CommandSet(sqltermcommand.SqlTermCommand):
@@ -54,6 +58,34 @@ class CommandSet(sqltermcommand.SqlTermCommand):
     def get_completions(
         parent, word_before_cursor: str, command_tokens: List[str]
     ) -> List["Suggestion"]:
+        from ..prompt.dataclasses import Suggestion
+
+        # check if the user is typing a subcommand
+        if len(command_tokens) == 1 or word_before_cursor == command_tokens[1]:
+            return [
+                Suggestion(
+                    setting_name, position=-len(word_before_cursor), suffix="setting"
+                )
+                for setting_name in _sub_parsers.choices.keys()
+                if (
+                    word_before_cursor in setting_name
+                    or setting_name in word_before_cursor
+                )
+            ]
+        if len(command_tokens) == 2 or word_before_cursor == command_tokens[2]:
+            match command_tokens[1]:
+                case "table_backend":
+                    return [
+                        Suggestion(
+                            backend_name,
+                            position=-len(word_before_cursor),
+                            suffix="backend",
+                        )
+                        for backend_name in TableBackendType
+                        if word_before_cursor in backend_name
+                        or backend_name in word_before_cursor
+                    ]
+
         return []
 
     def _set_table_backend(self: "CommandSet") -> None:

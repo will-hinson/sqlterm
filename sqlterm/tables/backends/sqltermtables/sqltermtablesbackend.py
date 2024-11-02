@@ -1,6 +1,7 @@
 from copy import copy
 from dataclasses import dataclass
 from enum import auto, Enum
+import math
 import shutil
 from typing import Dict, List, Tuple
 
@@ -62,7 +63,10 @@ class SqlTermTablesBackend(TableBackend):
                     values=(
                         values := [
                             (
-                                str(record[index]).splitlines()
+                                str(record[index])
+                                .replace("\t", "    ")
+                                .replace("\r", "")
+                                .splitlines()
                                 if record[index] is not None
                                 else ["NULL"]
                             )
@@ -88,7 +92,7 @@ class SqlTermTablesBackend(TableBackend):
     ) -> str:
         table_render: str = "\n"
         current_line_data = "╰"
-        current_line_data += "─" * (len(f"{total_records + 1}") + 2)
+        current_line_data += "─" * (len(f"{total_records}") + 2)
         last_line_mappings: List[ColumnSpec] = [
             column_mapping for column_mapping, _ in column_mappings_by_line[-1]
         ]
@@ -116,21 +120,21 @@ class SqlTermTablesBackend(TableBackend):
         separator_render: str
         if is_header_separator:
             separator_render = (
-                "\n" + "│" + (" " * (len(f"{record_set_size + 1}") + 2)) + "├"
+                "\n" + "│" + (" " * (len(f"{record_set_size}") + 2)) + "├"
             )
         else:
             separator_render = (
                 "\n"
                 + ("├" if include_index_column else "│")
                 + (line_char if include_index_column else " ")
-                * (len(f"{record_set_size + 1}") + 2)
+                * (len(f"{record_set_size}") + 2)
                 + ("┼" if include_index_column else "├")
             )
 
         # determine what points need upward-facing and downward-facing box characters
         separator_line: List[BoxCharacter] = [BoxCharacter.NEITHER] * (
-            max_line_length
-            - len("│" + (" " * (len(f"{record_set_size + 1}") + 2)) + "├")
+            (max_line_length - len("│" + (" " * (len(f"{record_set_size}") + 2)) + "├"))
+            # + (1 if record_set_size == 1 else 0)
         )
 
         col_offset: int = -1
@@ -176,9 +180,10 @@ class SqlTermTablesBackend(TableBackend):
         max_line_length: int,
         column_line_mappings: List[ColumnSpec],
         table_data: List[DataColumn],
+        columns_are_multiline: bool,
     ) -> str:
         table_render: str = "╭"
-        table_render += "─" * (len(f"{total_records + 1}") + 2)
+        table_render += "─" * (len(f"{total_records}") + 2)
         for column_mapping, data_column in zip(column_line_mappings, table_data):
             if column_mapping.line_offset > 0:
                 table_render += "─" * (max_line_length - len(table_render))
@@ -186,6 +191,12 @@ class SqlTermTablesBackend(TableBackend):
 
             table_render += "┬"
             table_render += "─" * (data_column.max_length + 2)
+
+        table_render += (
+            "─"
+            if math.log10(total_records + 1).is_integer() and not columns_are_multiline
+            else ""
+        )
 
         table_render += "╮"
         return table_render
@@ -232,7 +243,7 @@ class SqlTermTablesBackend(TableBackend):
                 len(column_offset) + len(" | ") + data_column.max_length
                 > terminal_width
             ):
-                max_line_length = max(max_line_length, len(column_offset) - 1)
+                max_line_length = max(max_line_length, len(column_offset) - 2)
 
                 # start a new line
                 column_offset: int = f"| {total_records + 1} | "
@@ -255,9 +266,19 @@ class SqlTermTablesBackend(TableBackend):
             max(column_mappings_by_line.keys())
         ]
 
+        # calculate the maximum line offset
+        max_line_number: int = max(
+            mapping.line_offset for mapping in column_line_mappings
+        )
+        columns_are_multiline: bool = max_line_number != 0
+
         # add the first header line
         table_render: str = self._render_top_border(
-            total_records, max_line_length, column_line_mappings, table_data
+            total_records,
+            max_line_length,
+            column_line_mappings,
+            table_data,
+            columns_are_multiline,
         )
 
         # now, add in each row of columns
@@ -265,10 +286,6 @@ class SqlTermTablesBackend(TableBackend):
         current_line_number: int = 0
         total_cell_count: int = 0
         cell_count: int = 0
-        max_line_number: int = max(
-            mapping.line_offset for mapping in column_line_mappings
-        )
-        columns_are_multiline: bool = max_line_length != 0
         for current_line_number in range(max_line_number + 1):
             # find the highest offset for the columns on this line
             highest_line_offset: int = 0
@@ -383,9 +400,23 @@ class SqlTermTablesBackend(TableBackend):
                         " "
                         * (
                             max_line_length
-                            - len(current_line_data)
-                            + (cell_count * len(colorama.Fore.RESET) * 2)
-                            + 1
+                            - (
+                                len(current_line_data)
+                                - (
+                                    # this accounts for the index escape sequences on line 0
+                                    len(colorama.Fore.RESET) * 2
+                                    if current_line_number == 0
+                                    and physical_line_offset == 0
+                                    else 0
+                                )
+                                - (
+                                    # this accounts for all of the cell escape codes
+                                    cell_count
+                                    * len(colorama.Fore.RESET)
+                                    * 2
+                                )
+                                - 1
+                            )
                         )
                     ) + "│"
                     cell_count = 0
@@ -420,12 +451,5 @@ class SqlTermTablesBackend(TableBackend):
         table_render += self._render_bottom_border(
             total_records, max_line_length, column_mappings_by_line, table_data
         )
-
-        # SELECT TOP 2 * FROM INFORMATION_SCHEMA.TABLES;
-        """
-        SELECT '  some
-value' AS "a
-column", 2 AS b;
-        """
 
         return table_render

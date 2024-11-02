@@ -61,6 +61,16 @@ class CommandInstall(sqltermcommand.SqlTermCommand):
     def get_completions(
         parent, word_before_cursor: str, command_tokens: List[str]
     ) -> List[Suggestion]:
+        if len(command_tokens) == 1 or word_before_cursor == command_tokens[1]:
+            return [
+                Suggestion(
+                    dialect_name, position=-len(word_before_cursor), suffix="dialect"
+                )
+                for dialect_name in parent.context.backends.sql.dialect_to_package_map
+                if word_before_cursor in dialect_name
+                or dialect_name in word_before_cursor
+            ]
+
         return []
 
     def _install_package(self: "CommandInstall", target_package: str) -> None:
