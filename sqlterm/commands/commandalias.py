@@ -108,6 +108,7 @@ class CommandAlias(sqltermcommand.SqlTermCommand):
     def get_completions(
         parent, word_before_cursor: str, command_tokens: List[str]
     ) -> List["Suggestion"]:
+        # pylint: disable=import-outside-toplevel
         from ..prompt.dataclasses import Suggestion
 
         if len(command_tokens) < 3:

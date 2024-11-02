@@ -63,6 +63,7 @@ class CommandConnect(sqltermcommand.SqlTermCommand):
     def get_completions(
         parent, word_before_cursor: str, command_tokens: List[str]
     ) -> List["Suggestion"]:
+        # pylint: disable=import-outside-toplevel
         from ..prompt.dataclasses import Suggestion
 
         word_before_cursor = word_before_cursor.lower()

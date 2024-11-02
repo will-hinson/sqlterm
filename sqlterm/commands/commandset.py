@@ -8,8 +8,6 @@ execution when the user types '%set ...' at the command line
 from argparse import ArgumentParser
 from typing import List
 
-from prompt_toolkit.styles import Style
-
 from . import sqltermcommand
 from .. import constants
 from ..config import TableBackendType
@@ -70,6 +68,7 @@ class CommandSet(sqltermcommand.SqlTermCommand):
     def get_completions(
         parent, word_before_cursor: str, command_tokens: List[str]
     ) -> List["Suggestion"]:
+        # pylint: disable=import-outside-toplevel
         from ..prompt.dataclasses import Suggestion
 
         # check if the user is typing a subcommand
@@ -129,6 +128,7 @@ class CommandSet(sqltermcommand.SqlTermCommand):
             self.parent.context.config.table_backend = TableBackendType(
                 self.args.backend_name
             )
+        # pylint: disable=broad-exception-caught
         except Exception as exc:
             self.parent.context.backends.prompt.display_exception(exc)
             return
