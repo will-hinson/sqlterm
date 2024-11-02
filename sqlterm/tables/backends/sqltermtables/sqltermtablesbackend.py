@@ -74,9 +74,12 @@ class SqlTermTablesBackend(TableBackend):
                         ]
                     ),
                     max_length=max(
-                        len(string_value)
-                        for string_value in column_name.splitlines()
-                        + [value for record in values for value in record]
+                        (
+                            len(string_value)
+                            for string_value in column_name.splitlines()
+                            + [value for record in values for value in record]
+                        ),
+                        default=0,
                     ),
                 )
             )
@@ -194,7 +197,9 @@ class SqlTermTablesBackend(TableBackend):
 
         table_render += (
             "─"
-            if math.log10(total_records + 1).is_integer() and not columns_are_multiline
+            if math.log10(total_records + 1).is_integer()
+            and not total_records == 0
+            and not columns_are_multiline
             else ""
         )
 
