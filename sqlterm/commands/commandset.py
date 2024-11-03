@@ -25,6 +25,12 @@ _command_set_arg_parser: ArgumentParser = ArgumentParser(
 _sub_parsers = _command_set_arg_parser.add_subparsers(dest="subcommand")
 _sub_parsers.required = True
 
+_command_set_autoformat = _sub_parsers.add_parser(
+    "autoformat",
+    help="Modifies the setting for autoformatting SQL input",
+)
+_command_set_autoformat.add_argument("on_or_off", type=str, choices=["off", "on"])
+
 _command_set_prompt_color_parser = _sub_parsers.add_parser(
     "prompt_color",
     help="Modifies the prompt color for the selected alias",
@@ -55,6 +61,8 @@ class CommandSet(sqltermcommand.SqlTermCommand):
 
     def execute(self: "CommandSet") -> None:
         match self.args.subcommand:
+            case "autoformat":
+                self._set_autoformat()
             case "prompt_color":
                 self._set_prompt_color()
             case "table_backend":
@@ -85,6 +93,17 @@ class CommandSet(sqltermcommand.SqlTermCommand):
             ]
         if len(command_tokens) == 2 or word_before_cursor == command_tokens[2]:
             match command_tokens[1]:
+                case "autoformat":
+                    return [
+                        Suggestion(
+                            setting_value,
+                            position=-len(word_before_cursor),
+                            suffix="setting",
+                        )
+                        for setting_value in ["on", "off"]
+                        if word_before_cursor in setting_value
+                        or setting_value in word_before_cursor
+                    ]
                 case "table_backend":
                     return [
                         Suggestion(
@@ -98,6 +117,20 @@ class CommandSet(sqltermcommand.SqlTermCommand):
                     ]
 
         return []
+
+    def _set_autoformat(self: "CommandSet") -> None:
+        autoformat_setting: bool
+        match self.args.on_or_off:
+            case "on":
+                autoformat_setting = True
+            case "off":
+                autoformat_setting = False
+            case _:
+                raise InvalidArgumentException(
+                    f"Invalid setting '{self.args.on_or_off}' for autoformat"
+                )
+
+        self.parent.set_autoformat(autoformat_setting)
 
     def _set_prompt_color(self: "CommandSet") -> None:
         if not self.parent.context.backends.sql.connected:
