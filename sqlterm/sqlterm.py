@@ -253,3 +253,6 @@ class SqlTerm:
         self._flush_config()
 
         self.context.backends.prompt.config.autoformat = autoformat_setting
+        self.print_message_sql(
+            f"Autoformat is now {'on' if autoformat_setting else 'off'}"
+        )
