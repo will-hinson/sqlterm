@@ -247,3 +247,9 @@ class SqlTerm:
         self._flush_config()
 
         self.context.backends.prompt.set_prompt_color(prompt_color)
+
+    def set_autoformat(self: "SqlTerm", autoformat_setting: bool) -> None:
+        self.context.config.autoformat = autoformat_setting
+        self._flush_config()
+
+        self.context.backends.prompt.config.autoformat = autoformat_setting
