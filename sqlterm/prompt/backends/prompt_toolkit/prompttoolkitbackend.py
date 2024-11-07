@@ -5,6 +5,7 @@ import time
 import traceback
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Type
 
+import clipboard
 from prompt_toolkit import (
     print_formatted_text,
     prompt,
@@ -12,6 +13,7 @@ from prompt_toolkit import (
     shortcuts,
 )
 from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.clipboard import ClipboardData
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import FormattedText
@@ -371,6 +373,16 @@ class PromptToolkitBackend(PromptBackend):
             except Exception as exc:
                 self.display_exception(exc, unhandled=True)
 
+        @bindings.add(Keys.ControlC)
+        def binding_ctrl_c(event: KeyPressEvent) -> None:
+            # if there's no selection, do the default interrupt behavior
+            if event.current_buffer.selection_state is None:
+                event.app.exit(exception=KeyboardInterrupt(), style="class:aborting")
+                return
+
+            # otherwise, copy the current selection to the system clipboard
+            clipboard.copy(event.current_buffer.copy_selection().text)
+
         @bindings.add(Keys.ControlS)
         def binding_ctrl_s(_: KeyPressEvent) -> None:
             try:
@@ -382,6 +394,11 @@ class PromptToolkitBackend(PromptBackend):
                     self.parent.print_info("Query profiling disabled.")
             except (DisconnectedException, NotImplementedError) as exc:
                 self.display_exception(exc, unhandled=False)
+
+        @bindings.add(Keys.ControlV)
+        def binding_ctrl_v(event: KeyPressEvent) -> None:
+            # paste from the system clipboard
+            event.app.current_buffer.insert_text(clipboard.paste())
 
         @bindings.add(Keys.ControlY, save_before=lambda _: False)
         def binding_ctrl_y(event: KeyPressEvent) -> None:

@@ -1,3 +1,4 @@
+clipboard==0.0.4
 colorama==0.4.6
 dataclasses-json==0.6.4
 levenshtein==0.25.1
