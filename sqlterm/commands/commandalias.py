@@ -41,6 +41,11 @@ _command_alias_remove_parser = _sub_parsers.add_parser(
 )
 _command_alias_remove_parser.add_argument("alias_name", type=str)
 
+_command_alias_show_parser = _sub_parsers.add_parser(
+    "show", help="Displays the connection string for the specified alias"
+)
+_command_alias_show_parser.add_argument("alias_name", type=str)
+
 
 class CommandAlias(sqltermcommand.SqlTermCommand):
     """
@@ -91,6 +96,16 @@ class CommandAlias(sqltermcommand.SqlTermCommand):
         if self.parent.context.backends.sql.alias == self.args.alias_name:
             self.parent.context.backends.sql.set_alias(None)
 
+    def _alias_show(self: "CommandAlias") -> None:
+        if self.args.alias_name not in self.parent.context.config.aliases:
+            raise NoAliasExistsException(
+                f"No known alias named '{self.args.alias_name}' exists"
+            )
+
+        self.parent.print_info(
+            self.parent.context.config.aliases[self.args.alias_name].url
+        )
+
     def execute(self: "CommandAlias") -> None:
         match self.args.subcommand:
             case "create":
@@ -99,6 +114,8 @@ class CommandAlias(sqltermcommand.SqlTermCommand):
                 self._alias_list()
             case "remove":
                 self._alias_remove()
+            case "show":
+                self._alias_show()
             case _:
                 raise NotImplementedError(
                     f"Subcommand '%alias {self.args.subcommand}' not implemented"
